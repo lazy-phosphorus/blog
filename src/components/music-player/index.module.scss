@@ -1,0 +1,147 @@
+.music {
+    height: 100%;
+    pointer-events: all;
+    display: flex;
+    border-radius: 0.25rem;
+    background-color: var(--color-base-300);
+    transition: {
+        property: background-color;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    > audio {
+        display: none;
+    }
+    > button {
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        cursor: pointer;
+        transform: rotateZ(var(--angle));
+        aspect-ratio: 1 / 1;
+        .cover {
+            height: 100%;
+            width: 100%;
+        }
+    }
+    > .info {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+        min-width: calc(var(--font-size) * 7);
+        margin: {
+            left: var(--font-size);
+            right: var(--font-size);
+        }
+        transition: {
+            property: margin-left, margin-right;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > div {
+            text-align: center;
+            line-height: 1;
+            @keyframes fade {
+                0% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 100;
+                }
+            }
+            &.title {
+                opacity: 0;
+                font-size: calc(var(--font-size) - 0.25rem);
+                transition: {
+                    property: font-size;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
+                }
+                animation: {
+                    name: fade;
+                    timing-function: ease-in-out;
+                    duration: 0.25s;
+                    iteration-count: 1;
+                    fill-mode: forwards;
+                }
+            }
+            &.author {
+                opacity: 0;
+                font-size: calc(var(--font-size) - 0.35rem);
+                transition: {
+                    property: font-size;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
+                }
+                animation: {
+                    name: fade;
+                    timing-function: ease-in-out;
+                    duration: 0.25s;
+                    iteration-count: 1;
+                    fill-mode: forwards;
+                }
+            }
+            &.controls {
+                width: 100%;
+                box-sizing: border-box;
+                display: none;
+                align-items: center;
+                font-size: calc(var(--font-size) + 1rem);
+                transition: {
+                    property: font-size;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
+                }
+                > button {
+                    cursor: pointer;
+                    color: var(--color-primary);
+                    transition: {
+                        property: color;
+                        duration: 0.25s;
+                        timing-function: ease-in-out;
+                    }
+                    &:hover {
+                        color: rgb(
+                            from var(--color-primary) calc(r - 50) calc(g - 50)
+                                calc(b - 50)
+                        );
+                    }
+                }
+            }
+        }
+        > button {
+            display: block;
+            cursor: pointer;
+            width: 100%;
+            height: 0.25rem;
+            border-radius: 100vmax;
+            overflow: hidden;
+            background-color: var(--color-base-200);
+            transition: {
+                property: background-color;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            > div {
+                pointer-events: none;
+                height: 100%;
+                width: var(--ratio, 0);
+                background-color: var(--color-primary);
+                transition: {
+                    property: background-color;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
+                }
+            }
+        }
+    }
+    &:hover > .info > div {
+        &.controls {
+            display: flex;
+        }
+        &.author,
+        &.title {
+            display: none;
+        }
+    }
+}

@@ -1,0 +1,52 @@
+@use "@/assets/scss/variables.scss" as v;
+
+:root {
+    --paper-padding: 4rem;
+    @media screen and (max-width: v.$screen-3xl) {
+        --paper-padding: 3.5rem;
+    }
+    @media screen and (max-width: v.$screen-2xl) {
+        --paper-padding: 3rem;
+    }
+    @media screen and (max-width: v.$screen-xl) {
+        --paper-padding: 2.5rem;
+    }
+    @media screen and (max-width: v.$screen-lg) {
+        --paper-padding: 2rem;
+    }
+    @media screen and (max-width: v.$screen-md) {
+        --paper-padding: 1.5rem;
+    }
+    @media screen and (max-width: v.$screen-sm) {
+        --paper-padding: 1rem;
+    }
+}
+
+.paper {
+    max-width: 60rem;
+    width: 100%;
+    left: 0;
+    right: 0;
+    margin: auto;
+    border-radius: 0.25rem;
+    box-sizing: border-box;
+    padding: var(--paper-padding);
+    background-color: rgba(from var(--color-base-100) r g b / 0.8);
+    transition: {
+        property: background-color, padding;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    > div {
+        border-radius: 0.25rem;
+        box-sizing: border-box;
+        box-shadow: 0 0 0.25rem 1px var(--color-primary);
+        padding: var(--paper-padding);
+        background-color: rgba(from var(--color-base-100) r g b / 0.9);
+        transition: {
+            property: box-shadow, background-color, padding;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+    }
+}

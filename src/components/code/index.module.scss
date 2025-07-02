@@ -1,0 +1,40 @@
+.code {
+    border-radius: 0.125rem;
+    padding: {
+        left: calc(var(--font-size) / 4);
+        right: calc(var(--font-size) / 4);
+    }
+    margin: {
+        left: calc(var(--font-size) / 4);
+        right: calc(var(--font-size) / 4);
+    }
+    transition: {
+        property: margin-left, margin-right, padding-left, padding-right;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    &.default {
+        background-color: #b4b4b4;
+        color: #414141;
+    }
+    &.fun {
+        background-color: #dfdf9f;
+        color: #414141;
+    }
+    &.var {
+        background-color: #9cdcfe;
+        color: #414141;
+    }
+    &.typ {
+        background-color: #3eb9a0;
+        color: #414141;
+    }
+    &.str {
+        background-color: #d69d85;
+        color: #414141;
+    }
+    &.kwd {
+        background-color: #569cd6;
+        color: #414141;
+    }
+}

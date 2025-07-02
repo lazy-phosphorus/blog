@@ -1,0 +1,82 @@
+.tab {
+    border: {
+        radius: 0.25rem;
+        style: solid;
+        color: var(--color-primary);
+    }
+    margin: {
+        top: calc(var(--font-size) / 2);
+        bottom: calc(var(--font-size) / 2);
+    }
+    transition: {
+        property: margin-left, margin-right, border-color;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    > div:first-child {
+        display: flex;
+        flex-wrap: wrap;
+        border-bottom: {
+            style: solid;
+            width: 2px;
+            color: var(--color-primary);
+        }
+        transition: {
+            property: margin-right, border-color;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > button {
+            flex-shrink: 0;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: #d4d4d4;
+            background-color: transparent;
+            gap: calc(var(--font-size) / 2);
+            padding: calc(var(--font-size) / 2) calc(var(--font-size) / 2);
+            transition: {
+                property: color, background-color, gap, padding;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            &:hover {
+                background-color: rgba(from var(--color-primary) r g b / 0.5);
+                color: var(--color-primary-content);
+            }
+            &:disabled {
+                background-color: var(--color-primary);
+                color: var(--color-primary-content);
+                cursor: default;
+            }
+            > * {
+                pointer-events: none;
+            }
+        }
+    }
+    > div:last-child {
+        padding: var(--font-size);
+        transition: {
+            property: padding;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > * {
+            box-shadow: unset;
+            margin: unset;
+            border-radius: unset;
+            display: none;
+            &.block {
+                display: block;
+            }
+            > div {
+                padding-top: unset;
+            }
+        }
+        &:not(:has(> .block)) > :first-child {
+            display: block;
+        }
+    }
+}

@@ -1,0 +1,29 @@
+.path {
+    animation: {
+        name: fill, stroke;
+        delay: 0.5s, 0s;
+        duration: 0.5s, 0.5s;
+        iteration-count: 1, 1;
+        timing-function: linear;
+        fill-mode: forwards;
+    }
+    @keyframes fill {
+        0% {
+            fill-opacity: 0;
+        }
+
+        100% {
+            fill-opacity: 1;
+        }
+    }
+
+    @keyframes stroke {
+        0% {
+            stroke-dashoffset: -100;
+        }
+
+        100% {
+            stroke-dashoffset: 0;
+        }
+    }
+}

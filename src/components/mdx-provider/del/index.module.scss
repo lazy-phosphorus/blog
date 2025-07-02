@@ -1,0 +1,23 @@
+.del {
+    border-radius: 0.125rem;
+    background-color: var(--color-base-content);
+    color: var(--color-base-content);
+    padding: {
+        left: calc(var(--font-size) / 4);
+        right: calc(var(--font-size) / 4);
+    }
+    margin: {
+        left: calc(var(--font-size) / 4);
+        right: calc(var(--font-size) / 4);
+    }
+    transition: {
+        property:
+            margin-left, margin-right, padding-left, padding-right, color,
+            background-color;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    &:hover {
+        background-color: transparent;
+    }
+}

@@ -1,0 +1,24 @@
+@use "@/assets/scss/variables.scss" as v;
+
+.left {
+    height: 100%;
+    display: flex;
+    > :first-child {
+        pointer-events: all;
+    }
+    > .info {
+        height: 100%;
+        > div {
+            height: 50%;
+            display: flex;
+            align-items: center;
+            > * {
+                pointer-events: all;
+            }
+        }
+    }
+}
+
+.right {
+    height: 100%;
+}

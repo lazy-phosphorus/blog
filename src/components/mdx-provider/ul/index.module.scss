@@ -1,0 +1,10 @@
+.ul {
+    margin-left: calc(var(--font-size) * 2);
+    margin: {
+        top: calc(var(--font-size) / 2);
+        bottom: calc(var(--font-size) / 2);
+    }
+    > li {
+        list-style: disc;
+    }
+}

@@ -1,0 +1,19 @@
+.blockquote {
+    border-radius: 0.25rem;
+    text-align: justify;
+    background-color: var(--color-base-300);
+    color: var(--color-base-content);
+    text-indent: calc(var(--font-size) * 2);
+    padding: calc(var(--font-size) / 2) var(--font-size);
+    margin: {
+        top: calc(var(--font-size) / 2);
+        bottom: calc(var(--font-size) / 2);
+    }
+    transition: {
+        property:
+            color, background-color, text-indent, padding, margin-top,
+            margin-bottom;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+}

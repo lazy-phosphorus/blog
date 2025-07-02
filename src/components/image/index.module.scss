@@ -1,0 +1,27 @@
+.image {
+    position: relative;
+    min-height: 0;
+    > img {
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+        transition: {
+            property: opacity;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        &.hidden {
+            opacity: 0;
+        }
+    }
+    .placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        &.hidden {
+            opacity: 0;
+        }
+    }
+}

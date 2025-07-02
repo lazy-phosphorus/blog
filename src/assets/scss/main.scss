@@ -1,0 +1,103 @@
+@use "@fontsource-variable/fira-code";
+@use "@fontsource-variable/noto-sans-sc";
+@use "@fontsource-variable/noto-serif-sc";
+@use "@/assets/scss/variables.scss" as v;
+
+:root {
+    --color-primary: #00bcd4;
+    --color-primary-content: #414141;
+    --color-secondary: #ffb7c5;
+    --color-secondary-content: #414141;
+    --color-accent: #a3e4d7;
+    --color-accent-content: #117864;
+    --color-base-100: #212121;
+    --color-base-200: #313131;
+    --color-base-300: #414141;
+    --color-base-content: #dedede;
+    --color-info: #85c1e9;
+    --color-info-content: #21618c;
+    --color-success: #abebc6;
+    --color-success-content: #1d8348;
+    --color-warning: #f7dc6f;
+    --color-warning-content: #f57f17;
+    --color-error: #e57373;
+    --color-error-content: #b71c1c;
+
+    --font-size: #{v.$text-xl};
+
+    @media (prefers-color-scheme: light) {
+        --color-base-100: #dedede;
+        --color-base-200: #cecece;
+        --color-base-300: #bebebe;
+        --color-base-content: #212121;
+    }
+
+    @media screen and (max-width: v.$screen-3xl) {
+        --font-size: #{v.$text-lg};
+    }
+    @media screen and (max-width: v.$screen-xl) {
+        --font-size: #{v.$text-base};
+    }
+    @media screen and (max-width: v.$screen-md) {
+        --font-size: #{v.$text-sm};
+    }
+}
+
+* {
+    user-select: none;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    font-family:
+        "Fira Code Variable", "Noto Sans SC Variable", "Noto Serif SC Variable",
+        sans-serif, serif, monospace, cursive;
+    margin: unset;
+    background-color: var(--color-base-200);
+    color: var(--color-base-content);
+    font-size: var(--font-size);
+    transition: {
+        property: font-size, background-color, color;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+}
+
+code {
+    font-family:
+        "Fira Code Variable", monospace, "Noto Sans SC Variable",
+        "Noto Serif SC Variable", sans-serif, serif, cursive;
+}
+
+#root {
+    height: 100%;
+    width: 100%;
+}
+
+a,
+button,
+ul,
+ol,
+li,
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+blockquote {
+    border: unset;
+    padding: unset;
+    margin: unset;
+    background: unset;
+    text-decoration: unset;
+    outline: unset;
+    color: unset;
+    font: unset;
+}
+
+li {
+    list-style: none;
+}

@@ -1,0 +1,10 @@
+.em {
+    font-style: italic;
+    font-family: "Fira Code Variable", "Noto Serif SC Variable";
+    padding-right: calc(var(--font-size) / 4);
+    transition: {
+        property: padding-right;
+        timing-function: ease-in-out;
+        duration: 0.25s;
+    }
+}

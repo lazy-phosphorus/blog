@@ -1,0 +1,69 @@
+:root {
+    --link-hover-bias: 50;
+}
+
+.link {
+    color: var(--color-primary);
+    transition: {
+        property: color;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    &:hover {
+        color: rgb(
+            from var(--color-primary) calc(r - var(--link-hover-bias))
+                calc(g - var(--link-hover-bias))
+                calc(b - var(--link-hover-bias))
+        );
+    }
+    &.secondary {
+        color: var(--color-secondary);
+        &:hover {
+            color: rgb(
+                from var(--color-secondary) calc(r - var(--link-hover-bias))
+                    calc(g - var(--link-hover-bias))
+                    calc(b - var(--link-hover-bias))
+            );
+        }
+    }
+    &.info {
+        color: var(--color-info);
+        &:hover {
+            color: rgb(
+                from var(--color-info) calc(r - var(--link-hover-bias))
+                    calc(g - var(--link-hover-bias))
+                    calc(b - var(--link-hover-bias))
+            );
+        }
+    }
+    &.success {
+        color: var(--color-success);
+        &:hover {
+            color: rgb(
+                from var(--color-success) calc(r - var(--link-hover-bias))
+                    calc(g - var(--link-hover-bias))
+                    calc(b - var(--link-hover-bias))
+            );
+        }
+    }
+    &.warning {
+        color: var(--color-warning);
+        &:hover {
+            color: rgb(
+                from var(--color-warning) calc(r - var(--link-hover-bias))
+                    calc(g - var(--link-hover-bias))
+                    calc(b - var(--link-hover-bias))
+            );
+        }
+    }
+    &.error {
+        color: var(--color-error);
+        &:hover {
+            color: rgb(
+                from var(--color-error) calc(r - var(--link-hover-bias))
+                    calc(g - var(--link-hover-bias))
+                    calc(b - var(--link-hover-bias))
+            );
+        }
+    }
+}

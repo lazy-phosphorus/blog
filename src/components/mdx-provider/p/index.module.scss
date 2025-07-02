@@ -1,0 +1,14 @@
+.p {
+    line-height: 1.75;
+    text-align: justify;
+    text-indent: calc(var(--font-size) * 2);
+    margin: {
+        top: calc(var(--font-size) / 2);
+        bottom: calc(var(--font-size) / 2);
+    }
+    transition: {
+        property: text-indent, margin-left, margin-right;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+}

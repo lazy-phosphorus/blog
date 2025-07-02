@@ -1,0 +1,23 @@
+.figure {
+    margin: {
+        top: calc(var(--font-size) / 2);
+        bottom: calc(var(--font-size) / 2);
+    }
+    transition: {
+        property: text-indent, margin-left, margin-right;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    .img {
+        width: auto;
+    }
+    > figcaption {
+        font-family: "Fira Code Variable", "Noto Serif SC Variable";
+        font-style: italic;
+        text-align: center;
+    }
+}
+
+.img {
+    width: 100%;
+}

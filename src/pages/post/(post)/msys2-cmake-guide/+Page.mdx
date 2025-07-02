@@ -1,0 +1,410 @@
+---
+title: MSYS2 与 CMake 编程综合指引
+draft: false
+date:
+    publish: 2024-06-20
+    modify: 2024-12-16
+description: 了解如何通过 MSYS2 安装 C/C++ 的编译工具链和第三方库，并使用 CMake 构建井然有序的工程。
+category:
+    - 计算机科学
+    - C/C++
+tag:
+    - 环境配置
+    - 构建工具
+    - C/C++
+    - CMake
+    - MSYS2
+---
+
+![文章封面](cover.webp "文章封面")
+
+import { Note } from "@/components/note";
+
+## 一、简介
+
+> MSYS2 is a collection of tools and libraries providing you with an easy-to-use environment for building, installing and running native Windows software.
+
+[msys2](https://www.msys2.org/ "msys2 官网")是一个在 Windows 操作系统上模拟类 Unix 目录的一套编译工具链与链接库的集合。其功能与[vcpkg](https://vcpkg.io/ "vcpkg 官网")有重叠之处，但 msys2 提供的功能远比 vcpkg 丰富。
+
+截至撰写本文之时，LLVM 工具链最新版本为 18.1.6。
+
+## 二、前置知识
+
+在了解 msys2 的用途之前，请确保已知悉下述知识点。
+
+### 1. 编译工具链
+
+#### (1) GCC
+
+> The GNU Compiler Collection includes front ends for C, C++, Objective-C, Fortran, Ada, Go, D and Modula-2 as well as libraries for these languages (libstdc++,...).
+
+GCC，全称 GNU 编译器集合，是由开源社区维护的一套编译工具链（gcc 只是其中一个用于 C 语言的编译程序），它最常用于各个 Linux 发行版中，其在 Windows 平台下也有移植版本，例如 MinGW。
+
+#### (2) LLVM
+
+> The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.
+
+LLVM 不是缩写，该工具链本身就叫这个名字。在不同平台上的表现与 GCC 各有优劣。它既可在类 Unix 环境下使用，也为 Windows 平台提供支持。
+
+#### (3) MSVC
+
+该编译工具链由微软提供，与 Visual Studio 绑定，主要在 Windows 平台上使用。使用 Visual Studio 进行编译时，若没有设置使用第三方工具链，则默认使用 MSVC 进行编译。
+
+### 2. C/C++运行时
+
+C/C++存在标准库，这些标准库在在各个平台上对外提供的 API 均一致。例如，`stdio.h`头文件下定义的`printf():fun`函数，不论在 Windows 平台中还是在各个 Linux 发行版中，不论是使用 gcc、clang 还是使用 msvc 编译，其返回值、参数类型均一致。但在统一的 API 之下，是各个平台、各个编译工具链各自不同的实现，这些实现往往会被编译为动态链接库，这些动态链接库也被称为**运行时**。在特定平台下使用特定编译工具链编译的二进制文件，只要使用了标准库，就会链接到这些运行时。也因此，在没有该平台/该编译工具链提供的运行时的环境下，执行该二进制文件（或执行链接到此文件的可执行文件）将发生找不到动态链接库的错误。
+
+下面以 C++为例，演示这种错误。
+
+```cpp [test.cpp]
+#include <iostream>
+
+int main() {
+    std::cout<<"Hello, world!\n";
+    return 0;
+}
+```
+
+```console [含 LLVM 工具链环境]
+> clang++ ./test.cpp -o test
+
+> ./test
+Hello, world!
+
+> ldd ./test
+linux-vdso.so.1 (0x00007fff0eed6000)
+libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f40b0059000)
+libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f40aff77000)
+libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f40aff4a000)
+libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f40afd65000)
+/lib64/ld-linux-x86-64.so.2 (0x00007f40b02cf000)
+```
+
+```console [不含 LLVM 环境]
+> ./test
+/home/res/test: /lib/x86_64-linux-gnu/libstdc++.so.6: version `GLIBCXX_3.4.32' not found (required by /home/res/test)
+```
+
+LLVM 使用的 C++标准库是其自己实现的 libc++，GCC 使用的 C++标准库则是 libstdc++，因此使用 clang++编译后的二进制文件（或链接到此文件的可执行文件）不能在没有由 LLVM 工具链提供的链接库的 Linux 发行版中执行。实际上，把所需的动态链接库复制一份，放在二进制文件所在目录下后，二进制文件也能正常运行。
+
+## 三、MSYS2 基础
+
+msys2 的安装请参考[官方网站](https://www.msys2.org/ "点击跳转")，此处不做赘述。
+
+<Note type="info" title="无法更新密钥/可信数据库">
+
+如果你是根据官方教程安装的 msys2，那么大概率在安装时会卡在：
+
+```console
+==> Updating trust database...
+```
+
+如果你对你的网络有信心，则什么都不要做等待安装完成即可；否则就断网。
+
+如果你是通过[Scoop](https://scoop.sh/ "Scoop 官方网站")安装的，则大概率在首次运行 msys2 时会遇到：
+
+```console
+gpg: error retrieving 'alexey.pawlow@gmail.com' via WKD: Connection timed out
+gpg: error reading key: Connection timed out
+gpg: refreshing 1 key from hkps://keyserver.ubuntu.com
+gpg: key F40D263ECA25678A: "Alexey Pavlov (Alexpux) <alexey.pawlow@gmail.com>" not changed
+gpg: Total number processed: 1
+gpg:              unchanged: 1
+```
+
+直接按 CTRL+C 退出进程，再关闭 msys2 后重新打开即可。
+
+</Note>
+
+### 1. 运行环境选择
+
+由于运行时的差异，msys2 为不同的工具链提供了不同的运行环境。
+
+| 环境名  | 架构 | 工具链 | C 运行时 | C++运行时 |
+| :-----: | :--: | :----: | :------: | :-------: |
+|  msys   | x64  |  GCC   |  cygwin  | libstdc++ |
+| ucrt64  | x64  |  GCC   |   ucrt   | libstdc++ |
+| clang64 | x64  |  LLVM  |   ucrt   |  libc++   |
+| mingw64 | x64  |  GCC   |  msvcrt  | libstdc++ |
+
+msys2 中也有支持 x86/ARM64 架构的环境，此处未列举。各个环境之间的具体差异，请参考[官方网站](https://www.msys2.org/docs/environments/#overview "点击跳转")。如果想使用 GCC 工具链，推荐使用 ucrt64 环境；如果想使用 LLVM 工具链，推荐使用 clang64 环境。msys 环境中安装的库会共享至所有环境，因此不推荐使用该环境，除非是安装 git、cmake 等第三方通用工具链。
+
+### 2. 命令行环境
+
+打开 cmd（或者 PowerShell），执行 clang64（或者 ucrt64）命令，即可进入 msys2 环境的 shell。该 shell 类似于 bash，兼容常用的 bash 命令，并且 msys2 内置了很多常用的程序，例如 grep、xargs 等。
+
+从命令行启动 msys2 时，除 msys 环境外，其他环境均会继承此命令行下的所有环境变量，包括 `PATH`。因此如果在 Windows 上也安装了其他编译工具链，则在 msys2 的环境内也可以使用该工具链。
+
+```console
+$ where clang
+C:\Users\Engin\software\Scoop\global\apps\msys2\2024-05-07\clang64\bin\clang.exe
+C:\Users\Engin\software\Scoop\global\apps\mingw-winlibs-llvm-ucrt\current\bin\clang.exe
+```
+
+由于作者是通过 Scoop 软件安装的 msys2 与 LLVM（UCRT 运行时）工具链，此处通过 where 命令查找到的 clang 二进制文件所在路径有两个，一个是由 msys2 的 clang64 环境提供的工具链，另一个则是不依赖 msys2 的独立的 LLVM 工具链。
+
+虽然 msys2 允许使用非 msys2 的工具链，但**不推荐**这么做。因为这么做可能会导致工具链找不到由 msys2 提供的链接库；也有可能会因为 msys2 提供的链接库的运行时与工具链的运行时不一致导致报错。
+
+若不希望继承当前命令行下的环境变量，则请使用如下命令：
+
+```console
+> msys2 -clang64
+```
+
+其中，`clang64`应当被替换为你所希望使用的环境名。
+
+### 3. 包管理器与工具链安装
+
+包管理器是类 Unix 系统的特色，不能不品尝。msys2 使用 pacman 作为包管理器，更新也是通过 pacman 更新。有关 pacman 使用方法请自行搜索，此处不做赘述。msys2 的包名统一按照`mingw-w64-[clang/ucrt-][架构]-[软件名]`格式命名，且**在任一环境下均可以安装其他所有环境的包**（但非此环境下的包不能使用），因此请一定确保输入的包名正确。以 clang64、ucrt64 和 mingw64 环境为例，安装对应工具链的命令分别是：
+
+```shell [clang64]
+pacman -S mingw-w64-clang-x86_64-toolchain
+```
+
+```shell [ucrt64]
+pacman -S mingw-w64-ucrt-x86_64-toolchain
+```
+
+```shell [mingw64]
+pacman -S mingw-w64-x86_64-toolchain
+```
+
+另外，推荐使用 clang64 环境的原因在于`mingw-w64-clang-x86_64-clang`包和`mingw-w64-clang-x86_64-clang-tools-extra`包。前者不仅提供了编译器等基础工具，还提供了用于代码格式化的 clang-format；而后者提供了用于静态代码检查的语言服务器 clangd（可用于 vscode）。
+
+## 四、CMake 基础
+
+[CMake](https://cmake.org/ "CMake 官网")是一个生成构建文件的工具，支持 Windows 和类 Unix 平台。构建文件，即类似于 Makefile 文件、Visual Studio 的工程文件等记录如何编译项目的文件。有了这些文件以后，构建工具即可根据这些文件正确编译整个项目。为什么不直接写构建文件？因为构建文件过于复杂，不是一般人能够维护的。
+
+CMake 的关键字甚至语法都不需要逐个记住，只需活用搜索引擎查找用法即可。CMake 在开始之前请确保已经安装对应环境下的 CMake 以及所需要使用的第三方库。截至撰写本文之时，CMake 最新版为 3.29.5。
+
+```shell
+pacman -S mingw-w64-clang-x86_64-cmake
+```
+
+### 1. 前置知识
+
+> pkg-config is a helper tool used when compiling applications and libraries.
+
+pkg-config 是用于查找已安装的第三方链接库的工具。它常用于为编译器提供正确的链接选项。该工具在安装 msys2 的工具链时就已经安装了。
+
+```console
+$ pkg-config --libs lua
+-llua -lm
+```
+
+上述命令查找了 lua 库，pkg-config 给出了正确的链接选项。
+
+### 2. 基本使用
+
+首先，在工程根目录下创建一个名为`CMakeLists.txt`的文本文件，CMake 将会根据此文件生成构建文件。一个`CMakeLists.txt`文件样例如下：
+
+```cmake
+# 设置 CMake 最低版本要求，不必一定是当前使用版本。
+cmake_minimum_required(VERSION 3.29.3)
+
+# 修改 CMake 提供的内置变量
+set(CMAKE_C_STANDARD 17)                # 设置 C 语言标准为 C17
+set(CMAKE_CXX_STANDARD 17)              # 设置 C++ 标准为 C++17
+set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+
+# 设置项目名（ritsu）、项目版本号（0.1.0）、使用语言（C、C++）
+project(ritsu VERSION 0.1.0 LANGUAGES C CXX)
+
+# 查找 pkg-config，通过 pkg-config 查找并配置第三方库
+find_package(PkgConfig REQUIRED)
+pkg_search_module(TESSERACT REQUIRED tesseract) # 查找 tesseract 库
+pkg_search_module(LUA REQUIRED lua)             # 查找 lua 库
+
+# 添加头文件搜索目录
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src ${TESSERACT_INCLUDE_DIRS} ${LUA_INCLUDE_DIRS})
+
+# 查找文件
+# 以递归方式查找所有位于当前工程目录的 src 文件夹下的 .c 文件
+# 查找结果将赋值给 ALL_SOURCES 变量
+file(GLOB_RECURSE ALL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+
+# 生成可执行文件
+add_executable(${PROJECT_NAME} ${ALL_SOURCES})
+
+# 链接第三方库
+target_link_libraries(${PROJECT_NAME} PRIVATE ${TESSERACT_LIBRARIES} ${LUA_LIBRARIES})
+```
+
+在 CMake 的语法中，`${}`中的字符将被视为变量，CMake 在执行时会替换为此变量的真实值。CMAKE 内置的常用变量有：
+
+- `PROJECT_NAME`，当前项目的名称，仅在
+  `project():kwd`语句之后可用。
+- `CMAKE_CURRENT_SOURCE_DIR`，当前`CMakeLists.txt`
+  所处目录
+- `CMAKE_ARCHIVE_OUTPUT_DIRECTORY`，静态链接库生成目录
+- `CMAKE_LIBRARY_OUTPUT_DIRECTORY`，动态链接库生成目录
+- `CMAKE_RUNTIME_OUTPUT_DIRECTORY`，可执行文件生成目录
+- `CMAKE_C_STANDARD`，C 语言的标准（例如 C17）
+- `CMAKE_CXX_STANDARD`，C++的标准（例如 C++17）
+- `CMAKE_EXPORT_COMPILE_COMMANDS` ，是否导出编译时的命令，这些命令可以为
+  clangd 提供静态代码检查的依据。
+
+某些第三方库会提供 CMake 的模块文件，可以直接使用`find_package():kwd`导入；但若某些库没有提供，则推荐使用 pkg-config。pkg-config 提供了 CMake 模块文件，使得 CMake 可以通过 pkg-config 查找并加载第三方库信息。其使用格式如下：
+
+```cmake
+pkg_search_module(<标识符> REQUIRED <库名>)
+```
+
+第三方库的头文件目录将会赋值给`<标识符>_INCLUDE_DIRS:var`变量，链接库则会赋值给`<标识符>_LIBRARIES:var`变量。
+
+编写完`CMakeLists.txt`文件后，在当前目录下执行如下命令即可完成编译：
+
+```shell
+cmake -G "MinGW Makefiles" .  # 最后的 "." 表示指定当前文件夹为 CMakeLists.txt 所在的工程目录
+mingw32-make                  # 如果安装了 make，则可以直接使用make
+```
+
+mingw32-make 是由 MinGW 提供的 make 的 Windows 平台移植版。如果安装了 msys 环境下的 make 包，则`-G`选项可以使用`"Unix Makefiles":str`或者`"MSYS Makefiles":str`值。该选项指定 CMake 应该为何种构建系统生成构建文件。
+
+命令执行完毕后，可在`CMAKE_RUNTIME_OUTPUT_DIRECTORY:var`变量对应的目录下找到可执行文件（如果没有设置此变量，则应该处于当前工程根目录下），同时会注意到 CMake 会在工程目录的根目录生成了不少缓存文件，这严重影响了工程目录的结构。这一问题将在下一小节得到解决。
+
+### 3. 预设
+
+当需要编译出不同的版本的二进制文件时（例如需要 Windows 版和 Linux 版），频繁修改`CMakeLists.txt`不是明智的选择。此处推荐使用 CMake 的预设。`CMakePresets.json`即为保存预设的文件，存储格式为 JSON，需要与`CMakeLists.txt`处于同一目录下。一个 CMake 预设文件的样例如下：
+
+```jsonc
+{
+    // CMake 版本要求
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 29,
+        "patch": 3,
+    },
+
+    // 预设
+    "configurePresets": [
+        {
+            "binaryDir": "${sourceDir}/build", // 指定 CMake 缓存文件以及构建文件生成路径
+            "cacheVariables": {
+                // 初始 CMake 变量，可在 CMakeLists.txt 中直接使用
+                // 也可修改默认的 CMake 变量
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/lib",
+                "CMAKE_C_STANDARD": "17",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "on",
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+            },
+            "hidden": true, // 不允许直接使用
+            "name": "base", // 预设名
+        },
+        {
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug", // debug 模式，禁用优化并为二进制文件附加调试信息
+            },
+            "hidden": true,
+            "inherits": "base", // 继承自 base 预设
+            "name": "debug",
+        },
+        {
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release", // release 模式，默认启用 O2 优化
+            },
+            "hidden": true,
+            "inherits": "base",
+            "name": "release",
+        },
+        {
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang", // 指定 C 语言编译器
+            },
+            "generator": "MinGW Makefiles", // 指定为何种构建系统生成构建文件
+            "hidden": true,
+            "name": "windows",
+        },
+        {
+            "description": "Windows Debug Configuration",
+            "displayName": "Windows Debug",
+            "inherits": ["debug", "windows"],
+            "name": "win-dbg",
+        },
+        {
+            "description": "Windows Debug Configuration",
+            "displayName": "Windows Debug",
+            "inherits": ["release", "windows"],
+            "name": "win-rel",
+        },
+    ],
+
+    // 预设的版本
+    "version": 8,
+}
+```
+
+在 CMake 的预设中，`${sourceDir}:var`会被替换为工程目录的路径。类似的宏扩展请参考[官方文档 - Macro Expansion](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html#macro-expansion "点击跳转")，此处不做赘述。使用 CMake 预设时，命令行参数需要添加`--preset`参数，命令样例如下：
+
+```shell
+mkdir build && cd build   # 创建构建文件缓存目录并切换到此目录
+cmake .. --preset win-dbg # 以 win-dbg 预设生成构建文件
+mingw32-make              # 编译项目
+```
+
+按照上述方式生成的构建文件将会全部处于`build`目录下，因此也必须在该目录下执行 mingw32-make 命令。
+
+### 4. CTest
+
+CTest 是 CMake 自带的一个用于单元测试的程序。正确编写`CMakeLists.txt`文件并编译项目后，在构建文件所在路径执行 ctest 命令即可执行所有单元测试并查看结果。
+
+```cmake [./CMakeLists.txt]
+# ...
+# 省略部分代码
+# ...
+
+# 此处仅当构建 debug 版本时才启用单元测试
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    enable_testing()
+
+    # 添加子项目，test 文件夹内存放单元测试代码
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+endif()
+```
+
+```cmake [./test/CMakeLists.txt]
+# 将源代码和单元测试代码的 src 路径添加到头文件搜索路径里
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# 按任意方式组织单元测试目录或代码均可
+### 此处按照每一个 .c 文件为一个独立单元测试的格式，
+### 递归遍历所有 .c 文件并编译为可执行文件
+file(GLOB_RECURSE sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+foreach(source ${sources})
+    get_filename_component(name ${source} NAME_WLE) # 获取不带后缀名的文件名
+    add_executable(${name} ${source})               # 编译为可执行文件
+    add_test(NAME ${name} COMMAND ${name})          # 添加到测试
+endforeach()
+```
+
+```console [命令行]
+$ cmake .. --preset debug && mingw32-make && ctest
+Preset CMake variables:
+
+  CMAKE_BUILD_TYPE="Debug"
+  CMAKE_C_STANDARD="17"
+  CMAKE_C_STANDARD_REQUIRED="on"
+  CMAKE_EXPORT_COMPILE_COMMANDS="on"
+
+-- Clean header output directory
+-- Clean header output directory -- done
+-- /home/res/c/collections/test/src/linked/list.c
+-- Configuring done (0.5s)
+-- Generating done (0.1s)
+-- Build files have been written to: /home/res/c/collections/build
+[100%] Built target list
+Test project /home/res/c/collections/build
+    Start 1: list
+1/1 Test #1: list .............................***Failed    0.01 sec
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   0.05 sec
+
+The following tests FAILED:
+          1 - list (Failed)
+Errors while running CTest
+Output from these tests are in: /home/res/c/collections/build/Testing/Temporary/LastTest.log
+Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.
+```

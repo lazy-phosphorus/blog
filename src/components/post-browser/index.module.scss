@@ -1,6 +1,12 @@
 .postcard {
     opacity: 0;
     transform: translateY(12.5%);
+    max-width: calc(var(--font-size) * 40);
+    transition: {
+        property: max-width;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
     animation: {
         name: slide;
         delay: var(--postcard-delay);

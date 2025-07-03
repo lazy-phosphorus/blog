@@ -32,10 +32,20 @@
         &.top {
             top: 0;
             transform: translateY(-75%);
+            &::after {
+                bottom: 0;
+                clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+                transform: translateY(100%);
+            }
         }
         &.bottom {
             bottom: 0;
             transform: translateY(75%);
+            &::after {
+                top: 0;
+                clip-path: polygon(0% 100%, 50% 0%, 100% 100%);
+                transform: translateY(-100%);
+            }
         }
         &::after {
             content: "";
@@ -43,12 +53,9 @@
             position: absolute;
             left: 0;
             right: 0;
-            bottom: 0;
             margin: auto;
             height: 8px;
             width: 8px;
-            clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
-            transform: translateY(100%);
             background-color: var(--color-info);
             transition: {
                 property: background-color;

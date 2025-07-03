@@ -1,4 +1,4 @@
-import type { FrontmatterType } from "@/types/frontmatter";
+import type { FrontmatterType } from "@/types/frontmatter.d";
 import cover from "./cover.webp";
 
 export async function data(): Promise<FrontmatterType> {

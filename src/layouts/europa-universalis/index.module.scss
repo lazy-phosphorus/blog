@@ -2,11 +2,8 @@
 
 :root {
     --header-height: 6rem;
-    @media screen and (max-width: v.$screen-lg) {
-        --header-height: 5rem;
-    }
-    @media screen and (max-width: v.$screen-sm) {
-        --header-height: 4rem;
+    @media screen and (max-width: v.$screen-3xl) {
+        --header-height: 3rem;
     }
 }
 
@@ -23,9 +20,9 @@
         display: flex;
         justify-content: space-between;
         transform: translateY(-100%);
-        height: var(--header-height);
         pointer-events: none;
         z-index: 114514;
+        height: var(--header-height);
         transition: {
             property: height;
             timing-function: ease-in-out;
@@ -46,6 +43,10 @@
                 transform: translateY(0%);
             }
         }
+        @media screen and (max-width: v.$screen-3xl) {
+            background-color: var(--color-base-200);
+            pointer-events: all;
+        }
     }
     > .main {
         width: 100%;
@@ -62,6 +63,9 @@
             property: padding-top;
             duration: 0.25s;
             timing-function: ease-in-out;
+        }
+        @media screen and (max-width: v.$screen-3xl) {
+            padding-top: calc(var(--header-height) + 0.25rem);
         }
         > main {
             width: 100%;

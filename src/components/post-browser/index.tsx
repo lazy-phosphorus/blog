@@ -1,14 +1,14 @@
 import { Frontmatter } from "@/components/frontmatter";
 import { DataConsumer } from "@/hooks/use-data";
 import { Card } from "@/layouts/card";
-import type { DataType } from "@/pages/post/types";
+import type { PostDataType } from "@/types/post-data";
 import style from "./index.module.scss";
 
-const PostConsumer = DataConsumer<DataType>;
+const PostConsumer = DataConsumer<PostDataType>;
 
 function publishDateDesc(
-    a: DataType["posts"][number],
-    b: DataType["posts"][number],
+    a: PostDataType["posts"][number],
+    b: PostDataType["posts"][number],
 ) {
     return (
         b.frontmatter.date.publish.getTime() -
@@ -16,12 +16,21 @@ function publishDateDesc(
     );
 }
 
-export function PostBrowser() {
+type PropsType = Readonly<{ category?: string; tag?: string }>;
+
+export function PostBrowser({ category, tag }: PropsType) {
     return (
         <PostConsumer>
             {({ posts }) =>
                 posts
                     .toSorted(publishDateDesc)
+                    .filter(({ frontmatter }) => {
+                        if (category !== void 0)
+                            return frontmatter.categories.includes(category);
+                        if (tag !== void 0)
+                            return frontmatter.tags.includes(tag);
+                        return true;
+                    })
                     .map(({ dirname, frontmatter }, i) => (
                         <Card
                             class={style.postcard}

@@ -1,3 +1,5 @@
+@use "@/assets/scss/variables.scss" as v;
+
 .music {
     height: 100%;
     pointer-events: all;
@@ -8,6 +10,9 @@
         property: background-color;
         duration: 0.25s;
         timing-function: ease-in-out;
+    }
+    @media screen and (max-width: v.$screen-3xl) {
+        background-color: transparent;
     }
     > audio {
         display: none;
@@ -64,6 +69,9 @@
                     iteration-count: 1;
                     fill-mode: forwards;
                 }
+                @media screen and (max-width: v.$screen-3xl) {
+                    display: none;
+                }
             }
             &.author {
                 opacity: 0;
@@ -80,21 +88,32 @@
                     iteration-count: 1;
                     fill-mode: forwards;
                 }
+                @media screen and (max-width: v.$screen-3xl) {
+                    display: none;
+                }
             }
             &.controls {
                 width: 100%;
                 box-sizing: border-box;
                 display: none;
                 align-items: center;
+                justify-content: space-between;
                 font-size: calc(var(--font-size) + 1rem);
                 transition: {
                     property: font-size;
                     duration: 0.25s;
                     timing-function: ease-in-out;
                 }
+                @media screen and (max-width: v.$screen-3xl) {
+                    display: flex;
+                    font-size: calc(var(--font-size) + 1.5rem);
+                }
                 > button {
                     cursor: pointer;
                     color: var(--color-primary);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
                     transition: {
                         property: color;
                         duration: 0.25s;
@@ -121,6 +140,9 @@
                 property: background-color;
                 duration: 0.25s;
                 timing-function: ease-in-out;
+            }
+            @media screen and (max-width: v.$screen-3xl) {
+                display: none;
             }
             > div {
                 pointer-events: none;

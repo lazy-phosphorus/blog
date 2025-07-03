@@ -1,14 +1,18 @@
-import type { ComponentChildren, ComponentType, JSX } from "preact";
+import type { ComponentType, JSX } from "preact";
 import style from "./index.module.scss";
 
-type PropsType = Readonly<{
-    icon: ComponentType<Omit<JSX.IntrinsicElements["svg"], "children">>;
-    children: ComponentChildren;
-}>;
+type PropsType = Readonly<
+    JSX.IntrinsicElements["div"] & {
+        icon: ComponentType<Omit<JSX.IntrinsicElements["svg"], "children">>;
+    }
+>;
 
-export function Badge({ icon: Icon, children }: PropsType) {
+export function Badge({ icon: Icon, children, ...props }: PropsType) {
     return (
-        <div class={style.badge}>
+        <div
+            {...props}
+            class={`${style.badge}${props.class !== void 0 ? ` ${props.class}` : ""}`}
+        >
             <Icon />
             <div>{children}</div>
         </div>

@@ -14,7 +14,7 @@ export function EuropaUniversalis({ children }: PropsType) {
             <header>
                 <Header />
             </header>
-            <div class={style.main}>
+            <div id="scroller" class={style.main}>
                 <main>{children}</main>
             </div>
         </div>

@@ -1,8 +1,11 @@
 @use "@/assets/scss/variables.scss" as v;
 
-.left {
+.pcleft {
     height: 100%;
     display: flex;
+    @media screen and (max-width: v.$screen-3xl) {
+        display: none;
+    }
     > :first-child {
         pointer-events: all;
     }
@@ -19,6 +22,14 @@
     }
 }
 
+.mbleft {
+    display: none;
+    @media screen and (max-width: v.$screen-3xl) {
+        display: block;
+    }
+}
+
 .right {
     height: 100%;
+    justify-self: flex-end;
 }

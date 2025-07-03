@@ -20,7 +20,8 @@ export function MusicPlayer() {
 
     useEffect(() => {
         audio.current!.volume = 0.2;
-    }, []);
+        audio.current!.play();
+    }, [audio]);
 
     /* onTimeUpdate 也可以实现，但是帧率很低 */
     function rotateAnime(timestamp: DOMHighResTimeStamp) {
@@ -30,7 +31,7 @@ export function MusicPlayer() {
         } else if (startTimestamp.current !== -1) {
             angle.current += (timestamp - startTimestamp.current) * 0.005;
             if (angle.current > 360) angle.current -= 360;
-            cover.current!.style.setProperty("--angle", `${angle}deg`);
+            cover.current!.style.setProperty("--angle", `${angle.current}deg`);
         }
         startTimestamp.current = timestamp;
         requestAnimationFrame(rotateAnime);

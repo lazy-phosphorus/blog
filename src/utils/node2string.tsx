@@ -1,4 +1,5 @@
 import type { ComponentChildren, VNode } from "preact";
+import { Code } from "@/components/code";
 import { TypeException } from "@/exception/type-exception";
 
 export function node2string(node: ComponentChildren): string {
@@ -12,8 +13,9 @@ export function node2string(node: ComponentChildren): string {
             "结点",
             (
                 <>
-                    应为 JSX.Element 类型。实际类型为 {typeof node} ，值为{" "}
-                    {node} 。
+                    应为<Code type="typ">JSX.Element</Code>类型。实际类型为
+                    <Code type="typ">{typeof node}</Code>，值为
+                    <Code type="default">{String(node)}</Code> 。
                 </>
             ),
         );

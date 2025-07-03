@@ -18,6 +18,8 @@ import unwrap from "rehype-unwrap-images";
 import gfm from "remark-gfm";
 import math from "remark-math";
 import pangu from "remark-pangu";
+import readingTime from "remark-reading-time";
+import readingTimeMdx from "remark-reading-time/mdx";
 import { visit } from "unist-util-visit";
 import vike from "vike/plugin";
 import { defineConfig } from "vite";
@@ -28,7 +30,14 @@ export default defineConfig({
         mdx({
             jsxImportSource: "preact",
             providerImportSource: "@mdx-js/preact",
-            remarkPlugins: [pangu, gfm, math, codetab],
+            remarkPlugins: [
+                pangu,
+                gfm,
+                math,
+                codetab,
+                readingTime,
+                readingTimeMdx,
+            ],
             rehypePlugins: [
                 unwrap,
                 media,

@@ -1,8 +1,8 @@
 import type { ComponentChildren } from "preact";
-import { Paper } from "@/layouts/paper";
+import { Waterfall } from "@/layouts/waterfall";
 
 type PropsType = Readonly<{ children: ComponentChildren }>;
 
 export function Layout({ children }: PropsType) {
-    return <Paper>{children}</Paper>;
+    return <Waterfall>{children}</Waterfall>;
 }

@@ -1,3 +1,8 @@
+import type { FrontmatterType } from "@/types/frontmatter";
+
 export interface DataType {
-    posts: string[];
+    posts: {
+        dirname: string;
+        frontmatter: FrontmatterType;
+    }[];
 }

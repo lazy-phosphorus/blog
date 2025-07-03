@@ -1,0 +1,14 @@
+@use "@/assets/scss/variables.scss" as v;
+
+.waterfall {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    gap: calc(var(--font-size) / 2);
+    transition: {
+        property: gap;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+}

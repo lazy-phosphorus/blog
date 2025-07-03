@@ -34,6 +34,13 @@ export default tseslint.config(
         rules: {
             // Put rules you want to override here
             "react-dom/no-dangerously-set-innerhtml": "warn",
+            "@typescript-eslint/no-unused-vars": [
+                1,
+                {
+                    argsIgnorePattern: "^_",
+                },
+            ],
+            "@typescript-eslint/no-namespace": 0,
         },
     },
     {
@@ -45,17 +52,7 @@ export default tseslint.config(
             },
         },
     },
-    {
-        rules: {
-            "@typescript-eslint/no-unused-vars": [
-                1,
-                {
-                    argsIgnorePattern: "^_",
-                },
-            ],
-            "@typescript-eslint/no-namespace": 0,
-        },
-    },
+    {},
     {
         files: ["**/*.{ts,tsx,js,jsx}"],
         languageOptions: {

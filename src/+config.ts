@@ -13,6 +13,7 @@ export const config: Config = {
         },
     },
     prerender: true,
+    trailingSlash: true,
     clientRouting: true,
     hydrationCanBeAborted: true,
 };
@@ -31,7 +32,9 @@ declare global {
             config: IPageContextConfig;
         }
         interface PageContextServer {
-            config: IPageContextConfig & { Head: ComponentType[] };
+            config: IPageContextConfig & {
+                Head: ComponentType<{ context: PageContextServer }>[];
+            };
         }
     }
 }

@@ -1,0 +1,72 @@
+.tooltip {
+    position: relative;
+
+    > .tip {
+        position: absolute;
+        width: fit-content;
+        word-break: keep-all;
+        display: flex;
+        justify-content: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        pointer-events: none;
+        opacity: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+        border-radius: 0.125rem;
+        line-height: normal;
+        background-color: var(--color-info);
+        color: var(--color-info-content);
+        padding: {
+            left: calc(var(--font-size) / 2);
+            right: calc(var(--font-size) / 2);
+        }
+        transition: {
+            property:
+                opacity, background-color, color, padding-left, padding-right,
+                transform;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        &.top {
+            top: 0;
+            transform: translateY(-75%);
+        }
+        &.bottom {
+            bottom: 0;
+            transform: translateY(75%);
+        }
+        &::after {
+            content: "";
+            display: block;
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            margin: auto;
+            height: 8px;
+            width: 8px;
+            clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+            transform: translateY(100%);
+            background-color: var(--color-info);
+            transition: {
+                property: background-color;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+        }
+        > * {
+            flex: none;
+        }
+    }
+    &:hover > .tip {
+        opacity: 100;
+        &.top {
+            transform: translateY(calc(-100% - 8px));
+        }
+        &.bottom {
+            transform: translateY(calc(100% + 8px));
+        }
+    }
+}

@@ -1,8 +1,10 @@
 .image {
     position: relative;
-    min-height: 0;
+    border-radius: 0.25rem;
+    overflow: hidden;
     > img {
         object-fit: cover;
+        display: block;
         width: 100%;
         height: 100%;
         transition: {
@@ -21,7 +23,7 @@
         width: 100%;
         height: 100%;
         &.hidden {
-            opacity: 0;
+            display: none;
         }
     }
 }

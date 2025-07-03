@@ -5,7 +5,7 @@
 .link {
     color: var(--color-primary);
     transition: {
-        property: color;
+        property: color, background-color, background-size;
         duration: 0.25s;
         timing-function: ease-in-out;
     }

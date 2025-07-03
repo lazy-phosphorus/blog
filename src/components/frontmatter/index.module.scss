@@ -1,0 +1,93 @@
+.frontmatter {
+    > h1 {
+        width: max-content;
+        max-width: 100%;
+        text-align: center;
+        font-size: calc(var(--font-size) + 1rem);
+        margin: {
+            bottom: var(--font-size);
+            left: auto;
+            right: auto;
+        }
+        transition: {
+            property: font-size, margin-bottom;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > .link {
+            background-image: linear-gradient(
+                to right,
+                var(--color-primary),
+                var(--color-primary)
+            );
+            background-size: 0px 3px;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            &:hover {
+                background-image: linear-gradient(
+                    to right,
+                    rgb(
+                        from var(--color-primary)
+                            calc(r - var(--link-hover-bias))
+                            calc(g - var(--link-hover-bias))
+                            calc(b - var(--link-hover-bias))
+                    ),
+                    rgb(
+                        from var(--color-primary)
+                            calc(r - var(--link-hover-bias))
+                            calc(g - var(--link-hover-bias))
+                            calc(b - var(--link-hover-bias))
+                    )
+                );
+                background-size: 100% 3px;
+            }
+        }
+    }
+    > .waterfall {
+        gap: var(--font-size);
+        margin: {
+            top: var(--font-size);
+            bottom: var(--font-size);
+        }
+        transition: {
+            property: margin-top, margin-bottom, gap;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > .metadata {
+            display: flex;
+            flex: none;
+            justify-content: center;
+            flex-direction: row;
+            align-items: center;
+            line-height: var(--font-size);
+            gap: calc(var(--font-size) / 4);
+            transition: {
+                property: gap, line-height;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+
+            > ul {
+                display: block;
+                > li {
+                    display: inline;
+                    &:not(:last-child)::after {
+                        content: "-";
+                    }
+                }
+            }
+        }
+    }
+    > .imglink {
+        display: block;
+    }
+    .image {
+        box-shadow: 0 0 0.25rem 1px var(--color-primary);
+        transition: {
+            property: box-shadow;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+    }
+}

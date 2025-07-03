@@ -1,5 +1,7 @@
 .figure {
     margin: {
+        left: unset;
+        right: unset;
         top: calc(var(--font-size) / 2);
         bottom: calc(var(--font-size) / 2);
     }
@@ -8,8 +10,20 @@
         duration: 0.25s;
         timing-function: ease-in-out;
     }
-    .img {
-        width: auto;
+    > button {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        cursor: zoom-in;
+        > .img {
+            width: fit-content;
+            box-shadow: 0 0 0.25rem 1px var(--color-primary);
+            transition: {
+                property: box-shadow;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+        }
     }
     > figcaption {
         font-family: "Fira Code Variable", "Noto Serif SC Variable";
@@ -18,6 +32,16 @@
     }
 }
 
-.img {
-    width: 100%;
+.mask {
+    cursor: zoom-out;
+    &.hidden {
+        display: none;
+    }
+    > .img {
+        cursor: default;
+        position: absolute;
+        > img {
+            pointer-events: none;
+        }
+    }
 }

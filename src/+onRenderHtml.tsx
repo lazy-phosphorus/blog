@@ -19,7 +19,7 @@ export async function onRenderHtml(context: PageContextServer) {
                     (acc, H) => (
                         <>
                             {acc}
-                            <H />
+                            <H context={context} />
                         </>
                     ),
                     <></>,

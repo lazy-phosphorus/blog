@@ -42,7 +42,6 @@ export function img({ src, title, alt }: PropsType) {
 
     function handleMouseMove(event: MouseEvent) {
         const self = event.currentTarget as HTMLDivElement;
-        console.log(event);
         if (isMouseDown.current === false) return;
         if (prevPoint.current === null) {
             prevPoint.current = {

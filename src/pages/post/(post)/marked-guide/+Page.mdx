@@ -1,0 +1,592 @@
+## 一、简介
+
+[Marked](https://marked.js.org/ "Marked 官网")是一个用 JavaScript 编写的 Markdown 文本解析库。与[remark](https://remark.js.org/ "remark 官网")相比，Marked 在生成抽象语法树上的可扩展性更强。若想将带有自定义语法的 Markdown 文本转换为 HTML，则 Marked 是不二之选。
+
+截至撰写本文之日，Marked 的最新版本为 12.0.1。
+
+## 二、基本使用
+
+### 1. 前置条件
+
+- [Node.js](https://nodejs.org/ "Node.js 官网")环境
+- 熟悉 JavaScript，最好也熟悉 TypeScript
+- 熟悉 HTML 与 Markdown
+
+### 2. 使用样例
+
+Marked 库内导出了一个名为`parse():fun`的函数，调用该函数即可以默认的方式将传入的 Markdown 文本解析为 HTML 文本。
+
+```typescript [main.ts]
+import { readFileSync } from "fs";
+// 需要安装 marked 依赖
+import { parse } from "marked";
+import { join } from "path";
+
+const markdown = readFileSync(join(__dirname, "test.md"), "utf-8");
+const html = parse(markdown); // [!code highlight]
+console.log(html);
+```
+
+```markdown [test.md]
+# title
+
+test.
+
+测试
+
+[链接](https://cn.bing.com "必应")
+
+![图片](./1.webp "标题")
+
+- 列表 1
+- 列表 2
+```
+
+```console [命令行]
+> ts-node --project tsconfig.json src/main.ts
+
+<h1>title</h1>
+<p>test.</p>
+<p>测试</p>
+<p><a href="https://cn.bing.com" title="必应">链接</a></p>
+<p><img src="./1.webp" alt="图片" title="标题"></p>
+<ul>
+<li>列表1</li>
+<li>列表2</li>
+</ul>
+```
+
+## 三、Marked 工作原理
+
+Marked 工作原理用一句话概述就是词法分析。首先，解析器（parser）根据默认定义的规则（rules，正则表达式），将 Markdown 文本按照先后顺序逐步解析为抽象语法树（AST）；然后按照深度优先遍历的方式，渲染器（renderer）将每一个结点（token）渲染为 HTML 文本；最后将文本拼接，就可以得到转换后的 HTML 文本。
+
+## 四、重写默认渲染
+
+Marked 支持重写默认解析与渲染。一般情况下，Marked 内置的解析器无需修改。若需要解析自定义 Markdown 语法，可以见下文的[自定义扩展](./#五、自定义扩展 "跳转至该节")一节。重写默认解析由于需要深入理解 Marked 工作流程，将在源码浅析章节后再叙述。
+
+若要重写默认渲染方式，则需要自行创建`Marked:typ`类的实例（该类也被 Marked 库导出），或者调用默认实例的`use():fun`函数。
+
+```typescript
+import { marked, Marked } from "marked";
+import type { MarkedExtension } from "marked";
+
+// 重写默认解析与渲染都应写在此处
+const extension: MarkedExtension = {
+    // ...
+};
+
+const a = new Marked(extension);
+/**
+ * 也可以使用以下代码添加扩展
+ * marked.use(extension);
+ */
+```
+
+`MarkedExtension:typ`接口声明了`renderer:var`属性。该属性值应为一个对象，其可定义的属性如下：
+
+````typescript
+const extension: MarkedExtension = {
+    renderer: {
+        /** 块级元素渲染 */
+        // infostring 为 "```" 后的字符串，escaped 指示渲染时是否应转义
+        code(code: string, infostring: string, escaped: boolean) {},
+        blockquote(quote: string) {},
+        // 渲染 Markdown 的内嵌 HTML，block 指示内嵌元素是否为块级的
+        html(html: string, block: boolean) {},
+        // 渲染标题，level 指示标题等级（如 <h3>）
+        heading(text: string, level: number, raw: string) {},
+        hr() {},
+        list(body: string, ordered: boolean, start: number) {},
+        listitem(text: string, task: boolean, checked: boolean) {},
+        checkbox(checked: boolean) {},
+        paragraph(text: string) {},
+        table(header: string, body: string) {},
+        tablerow(content: string) {},
+        tablecell(content: string, flags: object) {},
+
+        /** 行内元素渲染 */
+        strong(text: string) {},
+        em(text: string) {},
+        codespan(code: string) {},
+        br() {},
+        del(text: string) {},
+        link(href: string, title: string, text: string) {},
+        image(href: string, title: string, text: string) {},
+        text(text: string) {},
+    },
+};
+````
+
+请注意，上述函数必须返回`string:typ`类型的值（即 HTML 文本），不可以返回`Promise<string>:typ`。读者可根据自身需求，仅重写上述的部分函数。未被重写的函数，将保留默认值。
+
+## 五、自定义扩展
+
+重写默认渲染有其局限性，例如只能在默认解析的框架下改变解析结果，无法解析自定义语法。此时，要么重写默认解析，要么添加自定义扩展。
+
+`MarkedExtension:typ`接口声明了`extensions:var`属性，该属性为数组，位于其中的元素大致需要定义如下属性：
+
+```typescript
+type TokenizerAndRendererExtension = {
+    // 唯一标识，不可有重复
+    name: string;
+    // 是块级扩展还是行内扩展，块级优先级更高
+    level: "block" | "inline";
+    // 用于提示 Marked 距离下一个符合语法规则的字符串还有多少字符，不定义也可
+    start?: TokenizerStartFunction;
+    // 解析函数，将传入的文本解析为抽象语法树的结点（token）
+    tokenizer?: TokenizerExtensionFunction;
+    // 渲染函数，将传入的结点（token）渲染为 HTML 文本
+    renderer?: RendererExtensionFunction;
+    // 指定由解析函数返回的 token 中，哪些属性表示子结点。默认为 ["tokens"]
+    childTokens?: string[];
+};
+```
+
+Marked 在解析时，会不断删除已经被解析的字符串，直至不再有未被解析的字符串剩余。Marked 会按照优先级从高到低顺序（默认解析优先级低于自定义解析），依次调用`tokenizer():fun`函数。该函数若返回`undefined:kwd`，则说明当前字符串**起始位置**不符合此`tokenizer():fun`函数所适用的语法；否则应返回`Tokens.Generic:typ`类型的对象。生成抽象语法树后，Marked 将会以深度优先的方式遍历所有结点，调用`name:var`属性值与结点的`type:var`属性值相同的`renderer():fun`函数。
+
+一个自定义扩展样例如下：
+
+```typescript
+import type { TokenizerAndRendererExtension } from "marked";
+
+/**
+ * 目标自定义语法
+ *
+ * { % horizon % }
+ * ...（任意的块级元素，这些块级元素将被渲染为在同一排里）
+ * { % end horizon % }
+ */
+
+/**
+ * 正则表达式
+ * 注意必须以 "^" 开头，否则即使当前字符串开头不符合语法规则，
+ * 也可能因为后续有符合规则的语法，导致 Marked 判定为匹配成功。
+ */
+const horizonRegex =
+    /{\s*%\s*horizon\s*%\s*}\s+(?<content>[\s\S]+?)\s+{\s*%\s*end\s+horizon\s*%\s*}/; // [!code --]
+/^{\s*%\s*horizon\s*%\s*}\s+(?<content>[\s\S]+?)\s+{\s*%\s*end\s+horizon\s*%\s*}/; // [!code ++]
+
+export const horizon: TokenizerAndRendererExtension = {
+    name: "horizon",
+    level: "block",
+    start(text) {
+        // 指示距离符合规则的字符串还有多远
+        return text.search(horizonRegex);
+    },
+    tokenizer(text) {
+        const temp = horizonRegex.exec(text);
+        if (
+            temp === null ||
+            temp[0] === void 0 ||
+            temp.groups === void 0 ||
+            temp.groups.content === void 0
+        ) {
+            // 解析不成功，代表字符串开头不符合语法
+            return void 0;
+        }
+        return {
+            type: "horizon",
+            // 必需项，否则 Marked 无法删除已解析的字符串
+            raw: temp[0],
+            /**
+             * this 对象下有 lexer 属性
+             * blockTokens() 函数会将传入的字符串解析为 token 数组，
+             * 当自定义语法存在嵌套结构时，可以使用。
+             * 另，若内部元素仅可能为行内元素，则应使用 inlineTokens() 函数。
+             */
+            content: this.lexer.blockTokens(temp.groups.content),
+        };
+    },
+    renderer(token) {
+        // 传入的 token 不是当前自定义扩展的 token 时
+        if (token.type !== "horizon" || token.content === void 0) return false;
+
+        /**
+         * 返回渲染好的字符串
+         * 若有嵌套结构，可以调用 this 对象下 parser 属性的 parse() 函数，
+         * 该函数可以将 token 数组渲染为字符串。
+         * 另，若 token 数组内仅可能为行内元素，则应使用 parseInline() 函数。
+         */
+        return (
+            `<div class="post-horizon">` +
+            this.parser.parse(token.content) +
+            `</div>`
+        );
+    },
+
+    // 指定返回的 token 中，content 属性存放着子结点
+    childTokens: ["content"],
+};
+```
+
+## 六、遍历语法树
+
+在 Marked 完成抽象语法树构建后，在进入渲染阶段之前，使用者还有机会修改抽象语法树中的某些结点的值。`MarkedExtension:typ`接口声明了`walkTokens():fun`函数，该函数的类型如下：
+
+```typescript
+function walkTokens(token: Token): void | Promise<void>;
+```
+
+即，该函数可以是`async:kwd`的。对于使用[shiki](https://shiki.style/ "shiki 官网")库渲染代码块的人来说，`walkTokens():fun`函数是唯一可行的 API，因为 shiki 仅支持异步，且 Marked 的默认渲染与自定义扩展均不允许异步。
+
+`walkTokens():fun`函数是回调函数，Marked 在遍历每个结点时，会将该结点作为参数传入`walkTokens():fun`函数中。当参数的`type:var`属性值为`"code":str`时，该结点为代码块结点。一个简单代码样例如下：
+
+```typescript
+import type { MarkedExtension } from "marked";
+import { codeToHtml } from "shiki";
+
+export const extension: MarkedExtension = {
+    async walkTokens(token: Token) {
+        if (token.type === "code") {
+            token.text = await codeToHtml(token.text, { lang: token.lang });
+        }
+    },
+};
+```
+
+`walkTokens():fun`函数也可用于生成目录（TOC，Table Of Content），此处不作赘述。
+
+## 七、源码浅析
+
+在 Marked 的[Github](https://github.com/markedjs/marked "marked repository")仓库中，`src`文件夹下存放着其打包前的源码，其中，入口文件为`marked.ts`。其部分源码如下：
+
+```typescript
+import { Marked } from "./Instance.ts";
+
+const markedInstance = new Marked(); // [!code highlight]
+
+/**
+ * 当 opt 中的 async 属性为 true 时，返回值类型将为 Promise<string>，
+ * 否则为 string
+ */
+export function marked(
+    src: string,
+    opt?: MarkedOptions,
+): string | Promise<string> {
+    return markedInstance.parse(src, opt); // [!code highlight]
+}
+
+export const parse = marked; // [!code highlight]
+```
+
+从上述代码可以看出，在调用默认解析时，触发的是`Marked:typ`类下的`parse():fun`方法。该类定义在了`Instance.ts`文件下。其部分源码如下：
+
+```typescript
+import { _Lexer } from "./Lexer.ts";
+import { _Parser } from "./Parser.ts";
+
+export class Marked {
+    parse = this.#parseMarkdown(_Lexer.lex, _Parser.parse); // [!code highlight]
+    parseInline = this.#parseMarkdown(_Lexer.lexInline, _Parser.parseInline);
+
+    Parser = _Parser;
+    Lexer = _Lexer;
+
+    /**
+     * 省略 lexer 和 parser 的类型，
+     * 因为它们既冗长，又不重要
+     */
+    #parseMarkdown(lexer, parser) {
+        // 此处为了方便观察 Marked 工作流程，仅摘录异步工作流程
+        if (opt.async) {
+            return Promise.resolve(opt.hooks ? opt.hooks.preprocess(src) : src)
+                .then((src) => lexer(src, opt)) // [!code highlight]
+                .then((tokens) =>
+                    opt.hooks ? opt.hooks.processAllTokens(tokens) : tokens,
+                )
+                .then((tokens) =>
+                    opt.walkTokens
+                        ? Promise.all(
+                              this.walkTokens(tokens, opt.walkTokens),
+                          ).then(() => tokens)
+                        : tokens,
+                )
+                .then((tokens) => parser(tokens, opt)) // [!code highlight]
+                .then((html) =>
+                    opt.hooks ? opt.hooks.postprocess(html) : html,
+                )
+                .catch(throwError);
+        }
+    }
+}
+```
+
+因此，Marked 的完整工作流程应为：
+
+1. 触发预处理`preprocess():fun`钩子（hooks）
+2. 词法分析，将 Markdown 文本解析为抽象语法树
+3. 触发结点处理`processAllTokens():fun`钩子（hooks）
+4. 触发`walkTokens():fun`方法
+5. 将结点渲染为 HTML 文本
+6. 触发后处理`postprocess():fun`钩子（hooks）
+
+其中，各个阶段触发的钩子函数应定义在`MarkedExtension:typ`实例的`hooks:var`属性下。由于其相对简单，只需查看其类型和函数名即可了解该函数的用途，因此此处不做过多叙述。上述流程中最重要的就是第二步和第五步，分别用到了`_Parser:typ`类下的`lex():fun`静态方法和`_Lexer:typ`类下的`parse():fun`静态方法。
+
+### 1. `lex():fun`方法
+
+该方法定义在了`Lexer.ts`文件下，其部分源码如下：
+
+```typescript
+import { _Tokenizer } from "./Tokenizer.ts";
+import { _defaults } from "./defaults.ts";
+import { block, inline } from "./rules.ts";
+
+import type { Token, TokensList, Tokens } from "./Tokens.ts";
+import type { MarkedOptions, TokenizerExtension } from "./MarkedOptions.ts";
+
+export class _Lexer {
+    tokens: TokensList;
+
+    private tokenizer: _Tokenizer; // [!code highlight]
+    private inlineQueue: { src: string; tokens: Token[] }[];
+
+    constructor(options?: MarkedOptions) {
+        this.tokens = [] as unknown as TokensList;
+
+        this.options = options || _defaults;
+        this.options.tokenizer = this.options.tokenizer || new _Tokenizer(); // [!code highlight]
+
+        this.tokenizer = this.options.tokenizer; // [!code highlight]
+        this.tokenizer.options = this.options;
+        this.tokenizer.lexer = this;
+        this.inlineQueue = [];
+
+        const rules = {
+            block: block.normal,
+            inline: inline.normal
+        };
+
+        this.tokenizer.rules = rules;
+    }
+
+    // 静态方法
+    static lex(src: string, options?: MarkedOptions) {
+        const lexer = new _Lexer(options);
+        return lexer.lex(src);
+    }
+
+    // 成员方法
+    lex(src: string) {
+        src = src.replace(/\r\n|\r/g, "\n");
+
+        this.blockTokens(src, this.tokens); // [!code highlight]
+
+        for (let i = 0; i < this.inlineQueue.length; i++) {
+            const next = this.inlineQueue[i];
+            this.inlineTokens(next.src, next.tokens); // [!code highlight]
+        }
+        this.inlineQueue = [];
+
+        return this.tokens;
+    }
+
+    blockTokens(src: string, tokens: Token[] = []) {
+        /**
+         * 先在自定义扩展内寻找可以匹配当前字符串开头的
+         * this.options.extensions.block 是块级自定义扩展的 tokenizer() 函数的数组
+         */
+        while (src) {
+            if (
+                this.options.extensions &&
+                this.options.extensions.block &&
+                this.options.extensions.block.some(
+                    (extTokenizer: TokenizerExtension["tokenizer"]) => {
+                        if (
+                            (token = extTokenizer.call(
+                                { lexer: this },
+                                src,
+                                tokens
+                            ))
+                        ) {
+                            // 删除已被匹配的字符串，这也是为什么 raw 属性是必需的
+                            src = src.substring(token.raw.length); // [!code highlight]
+                            tokens.push(token); // [!code highlight]
+                            return true; // [!code highlight]
+                        }
+                        return false;
+                    }
+                )
+            ) {
+                continue;
+            }
+        }
+
+        /**
+         * 若字符串开头不符合任何自定义扩展的规则，则使用默认解析
+         * 此处仅摘录一例，默认标题解析
+         */
+        if ((token = this.tokenizer.heading(src))) {
+            src = src.substring(token.raw.length);
+            tokens.push(token);
+            continue;
+        }
+    }
+}
+```
+
+`inlineTokens():fun`方法与`blockTokens():fun`方法大同小异，上述源码样例中并未摘录。从上述源码中可以看出，在解析阶段，每次解析应当仅从当前字符串开头解析。Marked 首先会依次调用所有自定义扩展的`tokenizer():fun`函数。若其中有一例返回值不为`undefined:kwd`，则说明该自定义扩展可以解析 Marked 会删除已匹配的字符串（通过调用`substring():fun`方法，仅保留`raw:var`属性值之后的字符串）；否则说明没有能解析当前字符串的自定义扩展，将使用默认的解析器。所以，在[自定义扩展](./#五、自定义扩展 "跳转至此节")一节本文强调了用于匹配的正则表达式必须以`"^":str`开头，否则就不符合 Marked 的工作流程。
+
+Marked 的默认解析器是`_Tokenizer:typ`类的实例。该类定义在`Tokenizer.ts`文件内，其部分源码如下：
+
+```typescript
+import type { Rules } from "./rules.ts";
+
+export class _Tokenizer {
+    options: MarkedOptions;
+    rules!: Rules; // set by the lexer
+    lexer!: _Lexer; // set by the lexer
+
+    /** 此处仅摘录一例，默认标题解析器的定义 */
+    heading(src: string): Tokens.Heading | undefined {
+        const cap = this.rules.block.heading.exec(src);
+        if (cap) {
+            let text = cap[2].trim();
+
+            // remove trailing #s
+            if (/#$/.test(text)) {
+                const trimmed = rtrim(text, "#");
+                if (this.options.pedantic) {
+                    text = trimmed.trim();
+                } else if (!trimmed || / $/.test(trimmed)) {
+                    text = trimmed.trim();
+                }
+            }
+
+            return {
+                type: "heading",
+                raw: cap[0],
+                depth: cap[1].length,
+                text,
+                /** 调用 lexer 对象的 inline() 方法 ，解析其中的行内元素 */
+                tokens: this.lexer.inline(text), // [!code highlight]
+            };
+        }
+    }
+}
+```
+
+Marked 默认的解析器与自定义扩展中的`tokenizer():fun`大同小异，最大的区别就在于 Marked 把正则表达式统一放在了`_Tokenizer:typ`类下的`rules:var`属性中，该属性为`Rules:typ`类型。`Rules:typ`类型定义在`rules.ts`文件内，该文件内含有巨量的正则表达式，此处不做摘录。
+
+### 2. `parse():fun`方法
+
+该方法定义在了`Parser.ts`文件下，其部分源码如下：
+
+```typescript
+import { _Renderer } from "./Renderer.ts";
+
+export class _Parser {
+    options: MarkedOptions;
+    renderer: _Renderer;
+    constructor(options?: MarkedOptions) {
+        this.options = options || _defaults;
+        this.options.renderer = this.options.renderer || new _Renderer(); // [!code highlight]
+
+        this.renderer = this.options.renderer; // [!code highlight]
+        this.renderer.options = this.options;
+    }
+
+    // 静态方法
+    static parse(tokens: Token[], options?: MarkedOptions) {
+        const parser = new _Parser(options);
+        return parser.parse(tokens);
+    }
+
+    // 成员方法
+    parse(tokens: Token[], top = true): string {
+        let out = ""; // 最终输出的文本
+
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+
+            // 首先判定 token 类型是否由自定义扩展定义
+            if (
+                this.options.extensions &&
+                this.options.extensions.renderers &&
+                this.options.extensions.renderers[token.type]
+            ) {
+                const genericToken = token as Tokens.Generic;
+                // 使用自定义扩展中的渲染
+                const ret = this.options.extensions.renderers[
+                    genericToken.type
+                ].call({ parser: this }, genericToken);
+                if (
+                    ret !== false ||
+                    ![
+                        "space",
+                        "hr",
+                        "heading",
+                        "code",
+                        "table",
+                        "blockquote",
+                        "list",
+                        "html",
+                        "paragraph",
+                        "text",
+                    ].includes(genericToken.type)
+                ) {
+                    out += ret || "";
+                    continue;
+                }
+            }
+
+            // 默认渲染
+            switch (token.type) {
+                // 此处省略了其他 case
+                case "heading": {
+                    const headingToken = token as Tokens.Heading;
+                    // 渲染
+                    out += this.renderer.heading(
+                        this.parseInline(headingToken.tokens), // [!code highlight]
+                        headingToken.depth, // [!code highlight]
+                        unescape(
+                            this.parseInline(
+                                headingToken.tokens,
+                                this.textRenderer,
+                            ),
+                        ),
+                    );
+                    continue;
+                }
+            }
+        }
+
+        return out;
+    }
+}
+```
+
+在`parse():fun`成员方法内，Marked 会根据每个结点的`type:var`值，调用对应的`renderer:var`对象下的方法。`renderer:var`对象为`_Renderer:typ`类的实例，该类定义在`Renderer.ts`文件下。该文件的内容与重写默认渲染时所需的内容相似，此处不做赘述。
+
+## 八、重写默认解析
+
+由于本文撰写时，Marked 内部类型声明存在缺陷，导致`MarkedExtension:typ`接口下的`tokenizer:var`属性中的所有函数的`this:kwd`对象均会指向`tokenizer:var`属性本身（其实在上述源代码中，调用时的`this:kwd`对象将会被`call():fun`函数修改为`_Lexer:typ`类的实例）。但这只是类型声明的缺陷，不会影响正常使用，只需在重写默认解析时加上`this:kwd`对象的类型声明即可。一个简单的重写样例如下：
+
+```typescript
+import type { Lexer, MarkedExtension } from "marked";
+
+export const customTitle: MarkedExtension = {
+    tokenizer: {
+        // 此处仅重写了标题的默认解析，添加了 this 对象的类型声明
+        heading(this: { lexer: Lexer }, src) {
+            const match = /^(?<level>#+)\s*(?<text>[^\n]+)/.exec(src);
+
+            if (
+                match === null ||
+                match.groups === void 0 ||
+                match.groups.level === void 0 ||
+                match.groups.text === void 0
+            )
+                return void 0;
+
+            // 返回值的类型也应符合 Marked 的约束
+            return {
+                type: "heading",
+                raw: match[0],
+                depth: match.groups.level.length,
+                text: match.groups.text,
+                tokens: this.lexer.inline(match.groups.text),
+            };
+        },
+    },
+};
+```

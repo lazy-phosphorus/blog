@@ -1,0 +1,3715 @@
+import { Note, NoteTitle } from "@/components/note";
+
+<Note type="warn" title="实践出真知">
+
+较新的 C++ 标准可能会删除或修改部分旧有标准的特性，并且各个编译器的各个版本对 C++ 标准的支持情况也不同，请结合编译器官方给出的特性支持列表与本地编译结果综合考虑是否要使用某个特性。
+
+作为参考，本文所使用的编译器为 clang 20.1.3 版本。
+
+</Note>
+
+## 零、参考文献
+
+- [CPP Reference](https://zh.cppreference.com/ "点击跳转")
+
+## 一、核心概念
+
+### 1. 值类别
+
+**值类别区分的不是值，而是表达式。**
+
+> 每一个 C++ 表达式（操作符和相应的操作数，字面量，变量名等）含有两个独立属性：一个类型和一个值类别。每个表达式都具有某种非引用类型，并且属于某一个基本值类别：纯右值（prvalue）、亡值（xvalue）、左值（lvalue）。
+
+1.  泛左值（glvalue）是一种运算结果唯一标识某个实例或函数的表达式（类名、变量名、函数名等）。
+2.  纯右值的运算结果符合：
+    - 计算内置运算符的操作数的值（加减乘除、成员访问等）。
+    - 初始化了某个实例（由构造函数创建的值）。
+
+3.  亡值是一种代表资源可以被重用的实例的泛左值（即将被释放的变量等）。
+4.  左值是非亡值的泛左值。
+5.  右值是纯右值或亡值。
+
+一般而言，假定有类型`T:typ`，可以被赋值给`T:typ`实例的表达式是右值；可以被赋值给`T&:typ`实例的表达式是左值；可以被赋值给`T&&:typ`实例的表达式是亡值。
+
+### 2. 聚合体
+
+聚合体是数组，或满足以下条件的类：
+
+- 没有程序员提供或继承自父类的构造函数
+- 没有`private:kwd`或`protected:kwd`的直接非静态成员变量
+- 没有虚成员函数
+
+关于“继承自父类的构造函数”，请参见委托与继承的构造函数一节。实际上，聚合体类似于其它编程语言中的元组。
+
+### 3. 平凡成员函数
+
+平凡成员函数必须是六种默认成员函数（默认构造、默认析构、默认拷贝构造、默认移动构造、默认拷贝赋值、默认移动赋值）之一，且满足以下所有条件：
+
+- 该成员函数不是由程序员提供的（隐式实现的）
+- 该类没有虚成员函数与虚基类
+- 该类没有带有默认初始化器的非静态成员变量
+
+### 4. 标准布局类型
+
+标准布局的类型是满足以下所有条件的类：
+
+- 没有引用类型的非静态成员变量
+- 没有虚成员函数和虚基类
+- 所有非静态成员变量都有相同的可访问性（均为`private:kwd`、`protected:kwd`或`public:kwd`）
+- 继承层级中仅有一个类有非静态成员变量
+- 基类和成员变量均为标准布局的
+
+### 5. 简旧数据类型（POD）
+
+简旧数据类型，即 Plain Old Data，指兼容 C 语言的类型，可以直接以二进制形式与 C 库交互。具体而言，若某类型的数组可以被`memcpy():fun`函数拷贝，且拷贝后的数组元素功能完整，则该类型属于简旧数据类型。简旧数据类型必须是平凡的且标准布局的。
+
+## 二、C++ 11 标准
+
+> C++ 11 是 C++ 的第二个主要版本，并且是从 C++ 98 起的最重要更新。它引入了大量更改，标准化了既有实践，并改进了对 C++ 程序员可用的抽象。
+
+### 1. 核心特性
+
+#### (1) `auto:kwd`关键字与`decltype():kwd`关键字
+
+`auto:kwd`关键字本质上是一个占位符，编译器将在编译时自动推断此处的类型。`auto:kwd`关键字可以与`const:kwd`关键字和`&`修饰符搭配使用。
+
+```cpp [main.cpp]
+/* 此处等价于类型 T */
+template <typename T>
+static auto sum(T a, T b) {
+    return a + b;
+}
+
+int main() {
+    /* 自动类型推断： const char* */
+    auto str = "Hello, world!";
+    std::cout << "str = " << str << "\n";
+
+    /* 自动类型推断： int */
+    std::cout << "sum(114, 514) = " << sum(114, 514) << "\n";
+
+    /* 自动类型推断： int */
+    /* 也可以写成：auto p = sum<int> */
+    auto (*p)(int, int) = sum<int>;
+    std::cout << "p(1919, 810) = " << sum(1919, 810) << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+str = Hello, world!
+sum(114, 514) = 628
+p(1919, 810) = 2729
+```
+
+在 C++20（不包含）之前的标准里，`auto:kwd`不允许用于函数参数，C++20 及其之后允许用于函数参数，等价于泛型函数。
+
+`decltype():kwd`关键字需要一个表达式作为参数，用于产生该表达式的类型。
+
+1. 如果参数是不含括号的 ID 表达式（即变量名等唯一标识符）或不含括号的类成员访问表达式，那么该关键字产生表达式的类型。
+2. 如果参数是任意其它表达式，且其类型为`T:typ`，则：
+    - 如果表达式是亡值，返回`T&&:typ`。
+    - 如果表达式是左值，返回`T&:typ`。
+    - 如果表达式是纯右值，返回`T:typ`。
+
+#### (2) 默认成员函数与删除成员函数
+
+在 C++ 中，编译器会为所有类提供默认构造函数、复制构造函数、移动构造函数、复制赋值运算符、移动赋值运算符和析构函数，除非代码中已经实现了它们。这些成员函数可以被显式指定为默认的：
+
+```cpp
+class Lacia {
+    public:
+        /* 构造函数与析构函数 */
+        Lacia() = default;
+        ~Lacia() = default;
+
+        /* 拷贝构造与拷贝赋值 */
+        Lacia(const Lacia &) = default;
+        Lacia &operator=(const Lacia &) = default;
+
+        /* 移动构造与移动赋值 */
+        Lacia(Lacia &&) = default;
+        Lacia &operator=(Lacia &&) = default;
+};
+```
+
+显示指定默认成员函数时，不允许参数列表里出现默认实参。若不希望编译器提供默认实现，也可以将`default:kwd`关键字替换为`delete:kwd`关键字以弃用默认实现。`delete:kwd`关键字可以用于任意非纯虚函数，弃用函数只能被弃用函数覆写。
+
+关于移动构造与移动赋值，将在右值引用与移动构造、移动赋值一节详述。
+
+#### (3) `final:kwd`关键字与`override:kwd`关键字
+
+`final:kwd`关键字与`override:kwd`关键字都只能用于虚函数覆写时。`override:kwd`关键字用于标识该成员函数覆写了某个父类的同名虚函数；`final:kwd`关键字标识该成员函数覆写了虚函数的同时不允许再次被覆写，或标识某个类不允许被继承。
+
+```cpp
+class HIE {
+    public:
+        /* 虚函数 */
+        virtual void DoSomething();
+};
+
+class Lacia : public HIE {
+    public:
+        /* 覆写父类函数 */
+        void DoSomething() override {}
+};
+
+class Kouka final: public Lacia {
+    public:
+        /* 覆写父类函数，同时禁止子类覆写 */
+        void DoSomething() final {}
+};
+
+/* 禁止继承自此类 */
+class Snowdrop final : public Kouka {};
+```
+
+#### (4) 尾随返回类型
+
+C++ 11 允许返回类型在参数列表之后声明，此时原本的函数返回类型必须使用`auto:kwd`关键字：
+
+```cpp
+/* 尾随返回类型 */
+auto sumi32(std::int32_t a, std::int32_t b) -> std::int32_t { return a + b; }
+
+/* 利用 decltype 自动推导返回类型 */
+template <typename T, typename K>
+auto sum(T a, K b) -> decltype(a + b) {
+    return a + b;
+}
+```
+
+#### (5) 右值引用、移动与引用限定
+
+右值引用，即`T&&:typ`类型。右值引用可以暂缓临时实例的释放。
+
+```cpp [main.cpp]
+class Int {
+    private:
+        int self;
+
+        Int() = delete;
+
+        /* 禁止移动 */
+        Int &operator=(Int &&) = delete;
+        Int(Int &&) = delete;
+
+    public:
+        Int(int self) { this->self = self; }
+
+        /* 析构函数调用时会打印 */
+        ~Int() { std::cout << "Int destructed.\n"; }
+
+        /* 简单加法 */
+        Int operator+(const Int &a) { return Int(this->self + a.self); }
+};
+
+int main() {
+    /* 将释放两个临时实例 */
+    Int a = Int(114) + Int(514);
+    std::cout << "some Int instance should be destructed.\n";
+
+    /* 临时实例暂缓释放 */
+    Int &&b = Int(1919);
+    std::cout << "no Int instance should be destructed.\n";
+
+    return 0;
+    // <-- 释放 a 和有右值引用的临时实例
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+Int destructed.
+Int destructed.
+some Int instance should be destructed.
+no Int instance should be destructed.
+Int destructed.
+Int destructed.
+```
+
+在两个`Int:typ`临时实例做加法时，重载的运算符返回的也是`Int:typ`临时实例，所以看起来一共有三个`Int:typ`临时实例。但实际上，编译器将变量`a:var`拷贝赋值自`Int:typ`临时实例的过程优化成了类似于移动的过程。
+
+移动构造函数与拷贝构造函数的区别在于参数类型，前者是右值引用，后者是左值引用。当参数是左值时，编译器会选择拷贝构造函数；当参数是右值时，编译器会选择移动构造函数。赋值运算符与此类似。
+
+```cpp [main.cpp]
+class Int {
+    private:
+        int self;
+
+        Int() = delete;
+
+        /* 使用默认的移动构造与移动赋值 */
+
+    public:
+        Int(int self) { this->self = self; }
+        ~Int() { std::cout << "Int destructed.\n"; }
+
+        Int operator+(const Int &a) const { return Int(this->self + a.self); }
+
+        int Self() const { return this->self; }
+};
+
+std::ostream &operator<<(std::ostream &out, const Int &a) {
+    out << a.Self();
+    return out;
+}
+
+/* 参数 a 是左值引用，不触发拷贝构造；参数 b 触发拷贝构造与析构 */
+Int sum(const Int &a, Int b) { return a + b; } // [!code highlight]
+
+/* 参数 a, b 是右值引用，不触发拷贝构造 */
+Int sum(Int &&a, Int &&b) { return a + b; } // [!code highlight]
+
+int main() {
+    Int a = Int(114), b = Int(514);
+    std::cout << "0 instance destructed.\n";
+
+    /* 将释放 2 个实例：b 的拷贝和返回实例 */
+    std::cout << sum(a, b) << "\n";
+    std::cout << "2 instance destructed.\n";
+
+    /* 将释放 1 个实例：返回实例 */
+    std::cout << sum(std::move(a), std::move(b)) << "\n";
+    std::cout << "1 instance destructed.\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+0 instance destructed.
+628
+Int destructed.
+Int destructed.
+2 instance destructed.
+628
+Int destructed.
+1 instance destructed.
+Int destructed.
+Int destructed.
+```
+
+上述代码中，第一个`sum():fun`函数使用了一个左值引用作为参数的原因是右值引用可以通过移动构造函数转换为`Int:typ`实例，从而使编译器不知道该使用哪个重载函数导致编译时错误。`move<T>():fun`函数用于指示实例的“所有权”可以被更改（即将参数表达式的值类别转换为亡值）。
+
+积极使用移动构造/移动赋值，可以有效减少拷贝与析构开销。例如，当类成员含有指针时，拷贝构造/拷贝赋值需要再新分配内存空间并拷贝指针指向的值，而移动构造/移动赋值只需将指针指向同一地址即可。
+
+需要注意的是，在泛型中右值有可能被转换为左值：
+
+```cpp [main.cpp]
+/* 测试类 */
+class Entity {
+    private:
+        int value;
+        Entity() = delete;
+
+    public:
+
+        /* 左值构造检测 */
+        Entity(int &value) : value(value) {
+            std::cout << "lvalue reference, value = " << this->value << "\n";
+        }
+
+        /* 右值构造检测 */
+        Entity(int &&value) : value(value) {
+            std::cout << "rvalue reference, value = " << this->value << "\n";
+        }
+};
+
+template <class T, class U>
+T construct(U &&u) {
+    /* 表达式 u 是左值！ */
+    return T(u);
+}
+
+template <class T, class U>
+T forwardConstruct(U &&u) {
+    /* 转发，参数保持为右值 */
+    return T(std::forward<U>(u)); // [!code highlight]
+}
+
+int main() {
+    int i = 114;
+
+    Entity a = construct<Entity>(i);
+    Entity b = construct<Entity>(514);
+
+    Entity c = forwardConstruct<Entity>(i);
+    Entity d = forwardConstruct<Entity>(514);
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+lvalue reference, value = 114
+lvalue reference, value = 514
+lvalue reference, value = 114
+rvalue reference, value = 514
+```
+
+`forward<T>():fun`函数用于将左值转换为右值或保持右值不变，并且禁止右值转换为左值。
+
+为了限定调用成员函数的实例的值类别，非静态成员函数允许使用引用限定符。
+
+```cpp [main.cpp]
+/* 测试类 */
+class Entity {
+    public:
+        Entity() {}
+        ~Entity() {}
+
+        /* 左值限定 */
+        void ValueCategory() & { std::cout << "lvalue\n"; } // [!code highlight]
+
+        /* 右值限定 */
+        void ValueCategory() && { std::cout << "rvalue\n"; } // [!code highlight]
+};
+
+int main() {
+    Entity a;
+
+    std::cout << "Entity().ValueCategory() is ";
+    Entity().ValueCategory();
+
+    std::cout << "a.ValueCategory() is ";
+    a.ValueCategory();
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+Entity().ValueCategory() is rvalue
+a.ValueCategory() is lvalue
+```
+
+#### (6) 有作用域枚举
+
+传统的枚举形如：
+
+```cpp
+enum HttpStatusCode {
+    OK = 200,
+    BAD_REQUEST = 400,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+};
+
+HttpStatusCode code = OK;
+```
+
+使用枚举时直接写枚举值（例如`OK:kwd`等），这种做法可能会造成命名空间污染。如果要避免命名空间污染，C 语言的做法是将枚举值修改为`HTTP_STATUS_CODE:kwd`。而 C++ 11 及其之后允许：
+
+```cpp
+enum class HttpStatusCode : std::uint16_t {
+    OK = 200,
+    BAD_REQUEST = 400,
+    FORBIDDEN = 403,
+    NOT_FOUND = 404,
+};
+
+HttpStatusCode code = HttpStatusCode::OK;
+```
+
+#### (7) 常量表达式
+
+被`constexpr:kwd`关键字修饰的变量将在编译时就被求值。与`const:kwd`的区别是，后者是初始化时才会被求值，前者的值必须是常量表达式的结果（或者说，必须在编译器就可以求值）。
+
+```cpp
+template <typename T>
+constexpr T sum(T a, T b) {
+    return a + b;
+}
+
+constexpr int result = sum(114, 514);
+```
+
+能够被`constexpr:kwd`关键字修饰的类型必须满足下列之一：
+
+- 数值/枚举/指针类型
+- 引用类型（左值引用/右值引用）
+- 至少有一个被`constexpr:kwd`修饰的构造函数的类
+- 上述类型的数组
+
+```cpp
+template <typename T>
+class Sum {
+    private:
+        T result;
+
+    public:
+        constexpr Sum(T a, T b) { this->result = a + b; }
+        T Result() { return result; }
+};
+
+constexpr Sum a = Sum(114, 514);
+```
+
+#### (8) 列表初始化
+
+如果某个类是聚合体，则该类的实例可以使用列表初始化。
+
+```cpp [main.cpp]
+class ImnCipher {
+    public:
+        int a;
+        int b;
+        int c;
+        int d;
+};
+
+int main() {
+    /* 列表初始化 */
+    ImnCipher yjsp{114, 514, 1919, 810};
+
+    std::cout << "a = " << yjsp.a << ", b = " << yjsp.b << ", c = " << yjsp.c
+              << ", d = " << yjsp.d << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+a = 114, b = 514, c = 1919, d = 810
+```
+
+如果类不是聚合体，则必须有形参类型为`initializer_list<T>:typ`的构造函数。
+
+```cpp
+class Entity {
+    private:
+        int a;
+        int b;
+        int c;
+        int d;
+
+    public:
+        Entity(std::initializer_list<int> &&list) { // [!code highlight]
+            auto p = list.begin();
+            for (int i = 0; i < 4 && p != list.end(); i++) {
+                switch (i) {
+                    case 0: {
+                        this->a = *p;
+                        break;
+                    }
+                    case 1: {
+                        this->b = *p;
+                        break;
+                    }
+                    case 2: {
+                        this->c = *p;
+                        break;
+                    }
+                    case 3: {
+                        this->d = *p;
+                        break;
+                    }
+                }
+                p++;
+            }
+        }
+        ~Entity() {}
+};
+
+Entity a = {114, 514, 1919, 810};
+```
+
+`initializer_list<T>:typ`类定义在`<initializer_list>`头文件下。
+
+#### (9) 委托与继承的构造函数
+
+C++ 11 标准允许构造函数的初始化器列表中含有其它此类的构造函数。
+
+```cpp
+class ImnCipher {
+    private:
+        int a;
+        int b;
+        int c;
+        int d;
+
+    public:
+        ImnCipher(int a, int b, int c, int d) : a(a), b(b), c(c), d(d) {}
+
+        /* 委托的构造函数 */
+        ImnCipher() : ImnCipher(114, 514, 1919, 810) {}
+};
+```
+
+继承的构造函数是指使用`using:kwd`关键字在子类中直接对外暴露父类的构造函数：
+
+```cpp
+class HIE {
+    private:
+        std::string name;
+        std::string type;
+
+        HIE() = delete;
+
+    public:
+        HIE(std::string &&name, std::string &&type) : name(name), type(type) {}
+        virtual ~HIE() {}
+};
+
+class Lacia : public HIE {
+    public:
+        /* 直接使用父类构造函数 */
+        using HIE::HIE;
+};
+
+Lacia lacia = Lacia("Lacia", "Type-005");
+```
+
+#### (10) 空指针类型与字符类型
+
+`nullptr:kwd`关键字近似于`NULL:kwd`宏，表示空指针。但前者属于`nullptr_t:kwd`类型且是纯右值，且可以隐式转换为任意指针类型。
+
+```cpp
+template <typename T>
+T clone(const T &value) {
+    return value;
+}
+
+/* 保持 std::nullptr_t 类型 */
+auto a = clone(nullptr);
+
+/* 注意，被转换为了 int 类型 */
+auto b = clone(NULL); // [!code highlight]
+```
+
+为了表示 UTF-16 和 UTF-32 编码的字符，C++ 11 标准引入了两个**独立类型**：`char16_t:typ`和`char32_t:typ`。
+
+```cpp
+const char16_t *a = u"UTF-16 中文测试";
+const char32_t *b = U"UTF-32 中文测试";
+```
+
+上述代码中位于字符串前的`u`和`U`分别表示紧接着的字符串以 UTF-16 和 UTF-32 编码。目前 C++ 标准库还不支持直接输出`char16_t:typ`字符和`char32_t:typ`字符。
+
+#### (11) 类型别名
+
+虽然可以使用`typedef:kwd`关键字指定类型别名，但该关键字不适用于指定带泛型的类型别名。C++ 11 标准推荐使用`using:kwd`关键字指定类型别名。
+
+```cpp
+template <typename V>
+using Object = std::unordered_map<std::string, V>;
+
+/* 适用于内部类 */
+template <typename V>
+using ObjectIterator = typename Object<V>::iterator;
+```
+
+#### (12) 包与变参数泛型
+
+C++ 11 起，`...`所指代的变长参数被称为包，且允许泛型的参数中出现变长参数。
+
+```cpp
+/* 基础函数 */
+template <typename T>
+void print(T value) {
+    std::cout << value;
+}
+
+/* 变参数泛型 + 变参数函数 */
+template <typename T, typename... Ts>
+void print(T value, Ts... args) {
+    std::cout << value;
+
+    /* 当参数只剩一个时，将调用基础函数 */
+    print(args...);
+}
+```
+
+上述代码中的`args...`被称为包展开。包展开时允许使用`&`运算符（取地址运算符），包中的每一个变量均会变成指针。如果要获取包内元素个数，可以使用`sizeof...():kwd`，但对包使用索引这一特性目前计划于 C++ 26 中引入。
+
+#### (13) 推广的联合体
+
+C++ 11 起，联合体可以含有非平凡默认成员函数的成员（或者说非简旧数据类型成员），但联合体本身的对应默认成员函数可能会被标记为`delete:kwd`。
+
+```cpp [main.cpp]
+// [!code word:union]
+template <typename T>
+union Pack {
+    private:
+        /* 数组 */
+        std::vector<T> array;
+
+        /* 映射 */
+        std::unordered_map<std::string, T> object;
+
+        Pack() = delete;
+
+    public:
+        Pack(std::vector<T> &&array)
+            : array(std::forward<std::vector<T>>(array)) {}
+        Pack(std::unordered_map<std::string, T> &&object)
+            : object(std::forward<std::unordered_map<std::string, T>>(object)) {
+        }
+        ~Pack() {}
+
+        /* 运算符重载：赋值为数组 */
+        Pack &operator=(std::vector<T> &&array) {
+            /* 必须手动释放原有实例 */
+            this->object.~unordered_map();
+
+            /* 在指定地址初始化数组 */
+            new (&this->array)
+                std::vector<T>(std::forward<std::vector<T>>(array));
+
+            return *this;
+        }
+
+        /* 运算符重载：赋值为映射 */
+        Pack &operator=(std::unordered_map<std::string, T> &&object) {
+            this->array.~vector();
+            new (&this->object) std::unordered_map<std::string, T>(
+                std::forward<std::unordered_map<std::string, T>>(object));
+            return *this;
+        }
+
+        std::vector<T> &Array() { return this->array; }
+        std::unordered_map<std::string, T> &Object() { return this->object; }
+};
+
+int main() {
+    Pack<int> a({114, 514, 1919, 810});
+
+    for (int i = 0; i < a.Array().size(); i++) {
+        std::cout << a.Array()[i];
+        if (i == a.Array().size() - 1)
+            std::cout << "\n";
+        else
+            std::cout << ", ";
+    }
+
+     a = {{"114", 514}, {"1919", 810}};
+
+    auto p = a.Object().begin();
+    while (p != a.Object().end()) {
+        std::cout << p->first << "->" << p->second;
+        p++;
+        if (p == a.Object().end())
+            std::cout << "\n";
+        else
+            std::cout << ", ";
+    }
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+114, 514, 1919, 810
+114->514, 1919->810
+```
+
+请注意，上述代码并未对联合体内活跃成员做检测。当联合体含有非简旧数据类型成员变量时，对非活跃的非简旧数据类型成员变量的访问是未定义行为。例如：上述代码中，在变量`a:var`初始化后访问其`object:var`成员是未定义行为。
+
+#### (14) 字面量运算符
+
+程序员可以通过字面量运算符及其重载为字面量添加后缀。允许添加后缀的字面量仅有字符、字符串、`unsigned long long int:kwd`和`long double:kwd`类型。
+
+```cpp [main.cpp]
+/* _cube 后缀，计算三次方 */
+unsigned long long int operator""_cube(unsigned long long int num) {
+    return num * num * num;
+}
+
+/* 数字字面量转换为字符串 */
+std::string operator""_tos(const char *str) { return str; }
+
+/* 字符串字面量的长度 */
+std::size_t operator""_len(const char *str, std::size_t length) {
+    return length;
+}
+
+int main() {
+    unsigned long long int a = 114_cube;
+    std::string b = 0x114514_tos;
+    std::size_t c = "0x1919810"_len;
+
+    std::cout << "a = " << a << ", b = " << b << ", c = " << c << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+a = 1481544, b = 0x114514, c = 9
+```
+
+后缀的返回值可以是任意类型，但后缀本身必须以`_`（单下划线）开头且不允许双下划线。在后续标准中，标准库内陆续添加了一些内置字面量运算符。
+
+#### (15) 属性（Attributes）
+
+属性为各种编译器内置的用于控制函数/变量行为等的宏（例如`__attribute__():kwd`和`__declspec():kwd`）提供了统一接口。
+
+```cpp
+/* 指示函数永不返回 */
+void noReturn [[noreturn, gnu::noreturn]] () { exit(0); }
+
+/* 除微软编译器以外均强制内联 */
+[[gnu::always_inline, clang::always_inline, msvc::noinline]] inline int max(
+    int a, int b) {
+    return a > b ? a : b;
+}
+```
+
+属性可以用于类型、变量、函数、代码块等各个方面。
+
+#### (16) lambda 表达式
+
+lambda 表达式是纯右值，每一个 lambda 表达式的类型互相独立。
+
+```cpp
+typedef void (*Callback)(int);
+
+void sum(int a, int b, Callback callback) { callback(a + b); }
+
+int main() {
+    /* 使用 lambda 表达式打印结果，temp 是函数参数 */
+    sum(114, 514, [](int temp) { std::cout << temp << "\n"; });
+
+    return 0;
+}
+```
+
+在编译时，编译器会自动创建 lambda 表达式对应的类型。一般情况下不需要显式标注 lambda 表达式的返回类型，编译器会自动推导之。lambda 表达式允许其内部使用 lambda 表达式所在作用域的变量/函数等（包含`this:kwd`指针），这被称为捕获。必须显式指定需要捕获的变量名，或捕获方式：拷贝/引用。
+
+```cpp [main.cpp]
+// [!code word:__func__]
+class Entity {
+    public:
+        Entity() {}
+        ~Entity() {}
+        Entity(const Entity &) { std::cout << "copy constructed.\n"; }
+};
+
+int main() {
+    Entity a, b;
+
+    /* 显式指定捕获：a 会被拷贝，b 则是引用 */
+    auto fun = [a, &b]() { std::cout << __func__ << "\n"; };
+    fun();
+
+    /* 全部拷贝 */
+    auto fun1 = [=]() { std::cout << __func__ << "\n"; };
+
+    /* 全部拷贝，但 b 是引用 */
+    auto fun2 = [=, &b]() { std::cout << __func__ << "\n"; };
+
+    /* 全部引用 */
+    auto fun3 = [&]() { std::cout << __func__ << "\n"; };
+
+    /* 全部引用，但 a 是拷贝 */
+    auto fun4 = [&, a]() { std::cout << __func__ << "\n"; };
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+copy constructed.
+operator()
+copy constructed.
+```
+
+<Note type="info">
+
+<NoteTitle>`__func__:kwd`宏</NoteTitle>
+
+`__func__:kwd`宏是一种局部宏，作用范围是该函数体，值是该函数的函数名。
+
+</Note>
+
+可以看出 lambda 表达式在创建时就会拷贝一份/引用一次被捕获的变量。所以在使用 lambda 表达式且以引用方式捕获变量时，必须注意**垂悬引用**。被引用的变量在其生存期结束（例如局部变量或者被手动`delete:kwd`）后再调用 lambda 表达式属于未定义行为。
+
+lambda 表达式属于闭包类型。编译器会为每一种闭包类型定义如下函数：`operator()():fun`运算符、拷贝赋值运算符、构造函数、析构函数。`operator()():fun`运算符定义了实例被当作函数调用时触发的行为。
+
+```cpp [main.cpp]
+class Entity {
+    public:
+        Entity() {}
+        ~Entity() {}
+
+        int operator()(int a, int b) { return a + b; } // [!code highlight]
+        int operator()(int a, int b, int c) { return a > b ? c : -c; } // [!code highlight]
+};
+
+int main() {
+    Entity a;
+
+    std::cout << "a(114, 514) = " << a(114, 514) << "\n";
+    std::cout << "a(114, 514, 1919) = " << a(114, 514, 1919) << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+a(114, 514) = 628
+a(114, 514, 1919) = -1919
+```
+
+当 lambda 没有任何捕获时，编译器还会再定义一个类型转换操作符，用于将 lambda 表达式转换为对应类型的函数指针。
+
+```cpp [main.cpp]
+static int multiply(int a, int b) { return a * b; }
+
+class Entity {
+    public:
+        Entity() {}
+        ~Entity() {}
+
+        using Function = int (*)(int, int);
+
+        /**
+         * operator <类型名>() 运算符
+         * 定义转换至此类型时的行为
+         */
+        operator Function() { return multiply; } // [!code highlight]
+};
+
+int main() {
+    Entity a;
+
+    std::cout << "a(114, 514) = " << a(114, 514) << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+a(114, 514) = 58596
+```
+
+到这里大概也能猜出，编译器处理 lambda 表达式实际上就是创建了一个类，初始化实例时其成员变量会拷贝/引用被捕获的变量，调用实例时利用运算符重载调用函数。
+
+#### (17) `noexcept():kwd`关键字
+
+C++ 中的每个函数要么不会抛出错误，要么**可能**会抛出错误。有可能抛出错误的函数必须满足下列之一：
+
+- `noexcept():kwd`内的表达式求值为`false:kwd`
+- 函数声明不含`noexcept():kwd`关键字关键字，但必须**不是**下列之一：
+    - 成员与基类不会抛出错误的类的析构函数
+    - 默认构造函数、默认复制构造函数、默认移动构造函数，且基类或成员的构造函数不会抛出、默认成员初始化器不会抛出
+    - 复制赋值运算符、移动赋值运算符
+    - `delete:kwd`运算符
+
+```cpp
+// [!code word:noexcept]
+static int multiply(int a, int b) noexcept(false) {
+    long long int result = (long long int)a * (long long int)b;
+
+    if (result > INT_MAX) throw "overflowed";
+
+    return a * b;
+}
+```
+
+#### (18) 对齐
+
+`alignof():kwd`运算符返回类型所要求的对齐字节数（默认是成员的最长字节数）。如果是引用类型，则返回被引用类型的对齐字节数；如果是数组类型，则返回其元素类型的对其要求。
+
+`alignas():kwd`关键字一般位于`struct:kwd`关键字和`class:kwd`关键字之后，用于说明该类型的对齐字节数。对齐字节数不得少于成员最长字节数。
+
+#### (19) 线程局部存储
+
+被`thread_local:kwd`关键字修饰的实例均属于线程局部存储。在线程执行期间这些实例会持续存在，且独立于其它线程的同名实例。其行为类似于静态变量，但线程之间不互通。
+
+```cpp [main.cpp]
+static int closure() {
+    thread_local int x = 0;
+    x++;
+    return x;
+}
+
+int main() {
+    std::thread a([]() {
+        std::cout << "thread: closure() = " << closure() << "\n";
+        std::cout << "thread: closure() = " << closure() << "\n";
+    });
+
+    a.join();
+
+    std::cout << "closure() = " << closure() << "\n";
+    std::cout << "closure() = " << closure() << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+thread: closure() = 1
+thread: closure() = 2
+closure() = 1
+closure() = 2
+```
+
+`thread:typ`类型将在下文详述。
+
+#### (20) `for in:kwd`循环
+
+`for in:kwd`循环适用于有迭代器的类型。
+
+```cpp [main.cpp]
+class Entity {
+    public:
+        Entity() {}
+        ~Entity() {}
+
+        /* 触发拷贝时给点儿动静 */
+        Entity(const Entity &) { std::cout << "entity copied\n"; }
+};
+
+int main() {
+    /* 初始化映射时会触发拷贝 */
+    std::unordered_map<int, Entity> map(
+        {{114, Entity()}, {514, Entity()}, {1919, Entity()}, {810, Entity()}});
+
+    std::cout << "start traversal\n";
+
+    /* 触发拷贝 */
+    for (auto v : map) {
+        std::cout << v.first << "\n";
+    }
+
+    /* 引用，不触发拷贝 */
+    for (auto &v : map) {
+        std::cout << v.first << "\n";
+    }
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity copied
+entity copied
+entity copied
+entity copied
+entity copied
+entity copied
+entity copied
+entity copied
+start traversal
+entity copied
+810
+entity copied
+1919
+entity copied
+514
+entity copied
+114
+810
+1919
+514
+114
+```
+
+### 2. 库功能特性
+
+#### (1) 容器相关
+
+新增了以下容器相关类型：
+
+|          类名          |     代表的数据结构     |
+| :--------------------: | :--------------------: |
+|   `array<T, S>:typ`    | 固定大小不可扩展的数组 |
+| `forward_list<T>:typ`  |        单向链表        |
+| `unordered_map<T>:typ` |     基于哈希的映射     |
+| `unordered_set<T>:typ` |     基于哈希的集合     |
+|   `tuple<T...>:typ`    |          元组          |
+
+以上类型分别位于与其同名的头文件内。
+
+#### (2) 函数包装器
+
+`function<T(A...)>:typ`类型的实例可以存储函数指针、lambda 表达式等可以被调用的实例，该类型定义在`<functional>`头文件内。上文提到了编译器只会为不含任何捕获的 lambda 表达式定义转换为函数指针的运算符，若需将含有捕获的 lambda 表达式作为函数参数，则需要使用`function<T(A...)>:typ`类型。
+
+```cpp [main.cpp]
+/* 过滤容器中的元素，只有满足条件的元素会返回 */
+template <typename T>
+static std::vector<T> filter(const std::vector<T> &vec,
+                             std::function<bool(const T &, int)> &callback) {
+    std::vector<T> result;
+    for (int i = 0; i < vec.size(); i++) {
+        if (callback(vec[i], i)) result.push_back(vec[i]);
+    }
+    return result;
+}
+
+int main() {
+    std::vector<int> vec({1, 2, 3, 4, 5, 6, 7, 8, 9});
+
+    int condition = 4;
+
+    std::function<bool(const int &, int)> callback(
+        [&](const int &v, int index) {
+            /* 要么元素值为 4，要么下标为 4 */
+            return v == condition || index == condition;
+        });
+
+    std::vector<int> filtered = filter(vec, callback);
+    for (auto &v : filtered) {
+        std::cout << v << " ";
+    }
+    std::cout << "\n";
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+4 5
+```
+
+上述代码中，`function<bool(const T &, int)>:typ`类型表示函数返回类型为`bool:kwd`，参数类型分别为`const T&:typ`和`int:kwd`的可调用对象。
+
+`<functional>`头文件还提供了`bind():fun`函数，利用该函数可以实现“预置”函数参数。
+
+```cpp [main.cpp]
+// [!code word:ref]
+// [!code word:placeholders]
+/* 这个函数没变 */
+template <typename T>
+static std::vector<T> filter(const std::vector<T> &vec,
+                             std::function<bool(const T &, int)> callback) {
+    std::vector<T> result;
+    for (int i = 0; i < vec.size(); i++) {
+        if (callback(vec[i], i)) result.push_back(vec[i]);
+    }
+    return result;
+}
+
+int main() {
+    std::vector<int> vec({1, 2, 3, 4, 5, 6, 7, 8, 9}), discarded;
+
+    /* 多了两个参数，且无捕获的 lambda 表达式 */
+    std::function<bool(std::vector<int> &, int, const int &, int)> callback(
+        [](std::vector<int> &vec, int condition, const int &v, int index) {
+            bool result = v == condition || index == condition;
+
+            /* 如果不匹配就放到容器里 */
+            if (!result) vec.push_back(v);
+
+            return result;
+        });
+
+    /* 绑定前两个参数 */
+    std::function<bool(const int &, int)> fixedCallback( // [!code highlight]
+        std::bind(callback, std::ref(discarded), 4, std::placeholders::_1, // [!code highlight]
+                  std::placeholders::_2)); // [!code highlight]
+
+    std::vector<int> filtered = filter(vec, fixedCallback);
+
+    std::cout << "filtered: ";
+    for (auto &v : filtered) {
+        std::cout << v << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "discarded: ";
+    for (auto &v : discarded) {
+        std::cout << v << " ";
+    }
+    std::cout << "\n";
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+filtered: 4 5
+discarded: 1 2 3 6 7 8 9
+```
+
+上述代码中，`placeholders:typ`是命名空间，且`std::placeholders::_1:var`表示一个占位符，指示此处应该是函数的第一个参数，以此类推。`ref():fun`函数表示以引用的方式预置此参数（函数内对该参数的修改会传递至外部），与之类似的函数还有`cref():fun`函数，代表以常引用的方式预置此参数。利用`bind():fun`函数，不仅可以预置函数参数，还可以调整函数参数顺序。
+
+<Note type="info">
+
+<NoteTitle>`<functional>`头文件</NoteTitle>
+
+`<functional>`头文件是函数对象库的一部分。利用函数调用运算符重载可以将函数封装为类，而函数对象库里几乎都是这种类。例如，调用`plus<T>:typ`实例可以实现$$x + y$$的操作。
+
+</Note>
+
+#### (3) 与 C 语言的兼容
+
+C++ 11 标准将一些 C 语言标准库的头文件“移植”到了 C++ 标准库中。
+
+|         移植的头文件          |      头文件功能      |
+| :---------------------------: | :------------------: |
+|   `<stdint.h>`->`<cstdint>`   | 定宽整数类型及其最值 |
+|    `<uchar.h>`->`<cuchar>`    |  字符串及其编码转换  |
+| `<inttypes.h>`->`<cinttypes>` |  扩展的整数类型支持  |
+|     `<fenv.h>`->`<cfenv>`     |      浮点数环境      |
+
+#### (4) 编译时有理数
+
+`<ratio>`头文件内定义了`ratio<N, D>:typ`类。该泛型类的每一个具体类型都可以准确表示任何一个有限有理数（只要分子和分母能够被`intmax_t:typ`类型的数表示）。`ratio<N, D>:typ`类要求其两个泛型参数均为`intmax_t:typ`类型的实例，前者代表分子，后者代表分母。
+
+```cpp [main.cpp]
+using a = std::ratio<114, 514>; // 类型本身代表 114/514 这个数
+using b = std::ratio<1919, 810>; // 类型本身代表 1919/810 这个数
+
+using sum = std::ratio_add<a, b>; // 两数相加
+
+std::cout << sum::num << "/" << sum::den << "\n"; // [!code highlight]
+
+using c = std::ratio<3, 6>;
+using d = std::ratio<2, 4>;
+
+/* 比较两个分数是否相等 */
+using cmp = std::ratio_equal<c, d>;
+
+std::cout << cmp::value << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+539353/208170
+1
+```
+
+当两个泛型参数任意一个不相同时，两个类型就不是同一类型，但在类型具体化时分数会自动约分到最简。
+
+#### (5) 时间
+
+C++ 11 标准新增了`<chrono>`头文件，以更好地使用各种标准的时间。
+
+|                类名                 |  时钟类型  |
+| :---------------------------------: | :--------: |
+|     `chrono::system_clock:typ`      |  系统时钟  |
+|     `chrono::steady_clock:typ`      |  单调时钟  |
+| `chrono::high_resolution_clock:typ` | 高精度时钟 |
+
+上述类型的成员基本都是静态的。系统时钟指当前的系统内维护的时钟，可能会因为用户手动调整、网络对时等被修改从而导致“时间倒流”；单调时钟确保时间一定是增长的；高精度时钟则是指能获取的最高精度的时钟，具体取决于编译器使用的标准库和当前平台，可能是系统时钟或单调时钟，也可能二者都不是。
+
+```cpp [main.cpp]
+// [!code word:time_since_epoch]
+auto system = std::chrono::system_clock::now();
+auto steady = std::chrono::steady_clock::now();
+auto high_resolution = std::chrono::high_resolution_clock::now();
+
+std::cout << "system_clock: " << system.time_since_epoch().count() << "\n";
+std::cout << "steady_clock: " << steady.time_since_epoch().count() << "\n";
+std::cout << "high_resolution: "
+              << high_resolution.time_since_epoch().count() << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+system_clock: 1744684154847446
+steady_clock: 695460276315200
+high_resolution: 695460276315300
+```
+
+上述类型的`now():fun`静态成员函数的返回类型为`chrono::time_point<T>:typ`表示一个时间点，其`time_since_epoch():fun`成员函数会返回一个`chrono::duration<T, ratio<N, D>>:typ`实例，表示从时钟计时开始到当前时间点的时间段，`count():fun`函数的返回值是该时间段的“打点计时”次数，也就是当前时间戳。
+
+`chrono::duration<T, ratio<N, D>>:typ`泛型类的第一个泛型参数`T:typ`代表该时间段的数值部分用什么类型进行存储，`ratio<N, D>:typ`则代表该时间段的单位。例如，`chrono::milliseconds:typ`类型代表毫秒，该类型是`chrono::duration<T, ratio<1, 1000>>:typ`的类型别名；`chrono::minutes:typ`类型代表分钟，该类型是`chrono::duration<T, std::ratio<60, 1>>:typ`的类型别名。
+
+```cpp [main.cpp]
+std::chrono::milliseconds a(114);
+std::chrono::seconds b(514);
+
+// 将统一化为最小单位，再相加
+std::cout << (a + b).count() << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+514114
+```
+
+#### (6) 多线程
+
+C++ 11 标准引入了跨平台通用的线程库，包含线程（`<thread>`）、锁（`<mutex>`）、原子操作（`<atomic>`）、条件变量（`<condition_variable>`）。
+
+`thread:typ`类表示单个执行线程，其实例初始化时即开始执行线程。
+
+```cpp
+int main() {
+    auto th = std::thread([]() { std::cout << "Hello, world!\n"; });
+
+    th.join();
+    return 0;
+}
+```
+
+线程实例创建时，若没有向`thread:typ`类型的构造函数传入任何参数，则创建的实例代表当前线程；否则作为构造函数参数而传入的函数，其返回值将被忽略，且要么调用实例的`detach():fun`函数（与主线程分离），要么调用实例的`join():fun`函数（等待其执行完毕）。如果作为参数的函数有形参，则实参列表应紧随在该函数之后。
+
+判断某个线程实例是否可以调用`join():fun`函数，可以调用该实例的`joinable():fun`函数，返回`true:kwd`则为可调用`join():fun`。`joinable():fun`函数内部实际上是返回当前线程 ID 是否和实例 ID **不一致**。
+
+在`<thread>`头文件的`this_thread:typ`命名空间内定义了一些对当前线程进行操作的函数。
+
+|       函数名        |              作用              |
+| :-----------------: | :----------------------------: |
+|    `yield():fun`    | 挂起当前线程并重新加入调度队列 |
+|   `get_id():fun`    |        获取当前线程 ID         |
+|  `sleep_for():fun`  |      挂起当前线程一段时间      |
+| `sleep_until():fun` |   挂起当前线程直到指定时间戳   |
+
+`<mutex>`头文件下定义了以下锁：
+
+|            类名             |               作用               |
+| :-------------------------: | :------------------------------: |
+|         `mutex:typ`         |            基础互斥锁            |
+|      `timed_mutex:typ`      |            限时互斥锁            |
+|    `recursive_mutex:typ`    |   允许同一线程递归锁定的互斥锁   |
+| `recursive_timed_mutex:typ` | 允许同一线程递归锁定的限时互斥锁 |
+
+最基础的锁用法如下：
+
+```cpp [main.cpp]
+int sum = 0;
+std::mutex mutex; // [!code highlight]
+
+std::vector<std::function<void()>> tasks;
+std::vector<std::thread> threads;
+
+for (int i = 1; i <= 10; i++) {
+    tasks.push_back([&, i]() {
+        /* 如果想看不加锁的效果，建议让线程睡一会儿，效果更好 */
+        // std::this_thread::sleep_for(std::chrono::seconds(1));
+        mutex.lock(); // 阻塞等待锁 // [!code highlight]
+        sum += i;
+        mutex.unlock(); // [!code highlight]
+    });
+}
+
+for (auto &task : tasks) {
+    threads.push_back(std::thread(task));
+}
+
+for (auto &thread : threads) {
+    thread.join();
+}
+
+std::cout << "sum = " << sum << "\n";
+```
+
+```console [命令行]
+>  cmake .. --preset dbg && mingw32-make && ../bin/Hello
+sum = 55
+```
+
+限时互斥锁`timed_mutex:typ`比`mutex:typ`类多了两个成员函数：`try_lock_for():fun`和`try_lock_until():fun`，前者是尝试获取锁，持续一定时间；后者是尝试获取锁，直到指定时间戳。
+
+`recursive_mutex:typ`类型则允许一个线程在获取锁后再多次获取锁。与之对应地，获取了多少次锁就必须释放多少次锁。该锁常见于线程需要递归调用函数时。
+
+若需同时获取多个锁并避免死锁，则可使用`lock<Ta, Tb, T...>():fun`函数。该函数接受$$\geq 2$$的任意数量的锁作为参数，其中任意一个锁不可获得时会阻塞等待，直至所有锁均可获得。
+
+如果不想手动释放锁，则可以使用锁守卫：`lock_guard<T>:typ`类、`unique_lock<T>:typ`类或`scoped_lock<T>:typ`类。
+
+```cpp
+tasks.push_back([&, i]() {
+    std::lock_guard<std::mutex> lock(mutex); // [!code ++]
+    mutex.lock(); // [!code --]
+    sum += i;
+    mutex.unlock(); // [!code --]
+    // <-- lock 变量的作用域结束，释放锁
+});
+```
+
+上述类型以一个锁作为构造函数参数，实例创建时会自动获取锁，释放时会自动释放锁。`lock_guard<T>:typ`类不允许拷贝/移动；`unique_lock<T>:typ`类仅允许移动；`scoped_lock<T>:typ`类不允许拷贝/移动，但允许同时获取多个锁且不触发死锁。
+
+`<mutex>`头文件还定义了一个函数`call_once():fun`，该函数允许只调用某个函数（不抛出异常的情况下）一次。
+
+```cpp
+std::vector<std::function<void()>> tasks;
+std::vector<std::thread> threads;
+std::once_flag flag; // [!code highlight]
+
+/* 只会被执行一次的函数 */
+auto once = [](int i) { std::cout << i << ": only once\n"; };
+
+/* 所有线程统一被唤醒的时间： 当前时间 + 2s */
+auto wakeupTime =
+    std::chrono::steady_clock::now() + std::chrono::seconds(2);
+
+for (int i = 1; i <= 10; i++) {
+    tasks.push_back([&, i]() {
+        /* 线程先睡一会儿 */
+        std::this_thread::sleep_until(wakeupTime);
+
+        /* 参数：once_flag 实例、函数、函数的实参列表 */
+        std::call_once(flag, once, i);
+    });
+}
+
+for (auto &task : tasks) {
+    threads.push_back(std::thread(task));
+}
+
+for (auto &thread : threads) {
+    thread.join();
+}
+```
+
+`<atomic>`头文件下定义了`atomic<T>:typ`泛型类。`atomic<T>:typ`泛型类允许任意可复制构造且可复制赋值的可平凡复制类型作为泛型参数，对该泛型类实例的操作均为原子操作。该头文件下定义了部分类型别名，此处不做赘述。
+
+<Note type="info" title="遇到了 undefined symbol？">
+
+使用`atomic<T>:typ`泛型类时，如果使用了自定义的类型（或`<atomic>`头文件内没有定义对应原子类型别名的类型），则该类型的大小不能超过`intmax_t:typ`，否则编译时会报错`undefined symbol: __atomic_load`。
+
+</Note>
+
+条件变量相关的类型定义在`<condition_variable>`头文件下。`condition_variable:typ`类只能和`unique_lock<T>:typ`类搭配使用。
+
+```cpp [main.cpp]
+int sum = 0;            // 记录加法的和
+std::vector<int> path;  // 记录做加法的顺序
+
+std::vector<std::function<void()>> tasks;
+std::vector<std::thread> threads;
+
+std::mutex mutex;
+std::condition_variable ready; // [!code highlight]
+bool isReallyReady = false;
+
+for (std::int32_t i = 1; i <= 10; i++) {
+    tasks.push_back([&, i]() {
+        /* 上锁 */
+        std::unique_lock<std::mutex> lock(mutex);
+
+        /* wait() 函数会立即释放锁，并等待唤醒且循环等待回调函数返回 true ，然后再次阻塞式获取锁 */
+        ready.wait(lock, [&]() { return isReallyReady; });
+
+        /**
+         * 大致类似于：
+         * while (!callback()) wait(lock);
+         */
+
+        sum += i;
+        path.push_back(i);
+    });
+}
+
+for (auto &task : tasks) {
+    threads.push_back(std::thread(task));
+}
+
+for (auto &thread : threads) {
+    thread.detach();
+}
+
+isReallyReady = true;
+
+/* 通知所有线程可以执行 */
+ready.notify_all(); // [!code highlight]
+std::this_thread::sleep_for(std::chrono::seconds(2));
+
+std::cout << "sum = " << sum << "\n";
+for (int i = 0; i < path.size(); i++) {
+    std::cout << path[i];
+    if (i == path.size() - 1)
+        std::cout << "\n";
+    else
+        std::cout << " ";
+}
+```
+
+```console [命令行]
+>  cmake .. --preset dbg && mingw32-make && ../bin/Hello
+sum = 55
+2 6 7 5 4 10 8 1 3 9
+```
+
+`condition_variable:typ`实例的`wait():fun`函数会在其他线程调用同一实例的`notify_all():fun`函数或`notify_one():fun`函数时结束阻塞，但也有可能因为“假唤醒”而推出阻塞，所以必须额外设置变量以排除假唤醒。
+
+如果不想使用`unique_lock<T>:typ`类但又想使用条件变量，则应使用`condition_variable_any:typ`类，该类可以与任意**锁**（注意不是锁守卫）搭配工作。
+
+#### (7) 异步
+
+`<future>`头文件主要为异步提供支持。`promise<T>:typ`实例用于存储一个值或一个异常，之后调用其`get_future():fun`函数产生一个`future<T>:typ`实例，并从该实例同步阻塞式获取结果。这两种类型均不可复制，但可以移动。
+
+```cpp [main.cpp]
+std::promise<int> result;
+std::future<int> future = result.get_future();
+
+/* 创建线程后立即与主线程分离 */
+std::thread([&]() {
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+
+    /* 设置值，并于线程退出时分发提示 */
+    result.set_value_at_thread_exit(std::rand());
+}).detach();
+
+/* 读取 promise 实例被设置的值 */
+std::cout << "rand() = " << future.get() << "\n";
+
+/* 查看 future 实例是否有效 */
+std::cout << future.valid() << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+rand() = 41
+0
+```
+
+上述代码能够正常获取到`rand():fun`函数的结果，因为`future<T>:typ`实例的`get():fun`函数会阻塞等待，直到与其相关的`promise<T>:typ`实例首次被设置值或错误。`promise<T>:typ`实例仅能被设置一次值或错误，`future<T>:typ`实例也仅能调用一次`get():fun`函数。
+
+`promise<T>:typ`类的成员函数如下：
+
+|                函数名                |                 作用                 |
+| :----------------------------------: | :----------------------------------: |
+|          `get_future():fun`          |  获取与之关联的`future<T>:typ`实例   |
+|          `set_value():fun`           |                设置值                |
+|   `set_value_at_thread_exit():fun`   |  设置值，但等到线程退出时才分发提示  |
+|        `set_exception():fun`         |               设置错误               |
+| `set_exception_at_thread_exit():fun` | 设置错误，但等到线程退出时才分发提示 |
+
+`future<T>:typ`类的成员函数如下：
+
+|       函数名       |                                         作用                                         |
+| :----------------: | :----------------------------------------------------------------------------------: |
+|    `get():fun`     |                      同步阻塞式获取关联`promise<T>:typ`实例的值                      |
+|   `valid():fun`    | 检查此实例是否有关联的`promise<T>:typ`实例且还未调用过`get():fun`或`share():fun`函数 |
+|    `wait():fun`    |                    同步阻塞等待关联`promise<T>:typ`被设置值或错误                    |
+|  `wait_for():fun`  |                                   限时同步阻塞等待                                   |
+| `wait_until():fun` |                               同步阻塞等待至指定时间戳                               |
+|   `share():fun`    |                      将当前实例转换为`shared_future<T>:typ`实例                      |
+
+如果`promise<T>:typ`实例保存的是错误而非值，则调用与之关联的`future<T>:typ`实例的`get():fun`函数时会抛出该错误。`shared_future<T>:typ`类型与`future<T>:typ`基本一致，但区别在于前者允许复制且可以多次调用`get():fun`函数，即：可以在多个线程间共享一个`promise<T>:typ`实例的值。
+
+```cpp [main.cpp]
+std::promise<int> barrierTrigger;
+std::shared_future<int> barrier = barrierTrigger.get_future().share(); // [!code highlight]
+
+std::mutex pathMutex;
+std::vector<int> path;
+std::vector<std::promise<void>> finishTriggers;
+
+for (int i = 1; i <= 10; i++) {
+    finishTriggers.push_back(std::promise<void>());
+    std::thread([&, i, barrier]() {
+        /* 阻塞式等待来自主线程的“信号” */
+        int bias = barrier.get();
+        pathMutex.lock();
+        path.push_back(i + bias);
+        pathMutex.unlock();
+        finishTriggers[i - 1].set_value_at_thread_exit();
+    }).detach();
+}
+
+barrierTrigger.set_value(114);
+
+/* 等待所有线程执行结束 */
+for (auto &v : finishTriggers) {
+    v.get_future().wait();
+}
+
+for (int i = 0; i < path.size(); i++) {
+    std::cout << path[i];
+    if (i == path.size() - 1)
+        std::cout << "\n";
+    else
+        std::cout << " ";
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+115 119 120 121 122 116 117 124 118 123
+```
+
+`<future>`头文件下还定义了一个函数`async():fun`，该函数用于异步运行某个指定函数，并返回一个`future<T>:typ`以获取该函数的返回值。
+
+```cpp [main.cpp]
+/* 上锁，不上锁标准输出会乱序 */
+std::mutex mutex;
+
+/* 查看主线程 ID */
+mutex.lock();
+std::cout << "main thread: " << std::this_thread::get_id() << "\n";
+mutex.unlock();
+
+/* 在不同线程上执行函数 */
+auto result0 = std::async(std::launch::async, [&]() {
+    mutex.lock();
+    std::cout << "result0 executing thread: " << std::this_thread::get_id()
+                << "\n";
+    mutex.unlock();
+    return 114514;
+});
+
+/* 在调用 get() 函数的线程上懒执行函数 */
+auto result1 = std::async(
+    std::launch::deferred,
+    [&](int v) {
+        mutex.lock();
+        std::cout << "result1 executing thread: "
+                    << std::this_thread::get_id() << "\n";
+        mutex.unlock();
+        return v;
+    },
+    1919);
+
+/* 套娃：异步返回懒执行，在主线程执行懒执行 */
+auto result2 = std::async(std::launch::async, [&]() {
+    mutex.lock();
+    std::cout << "result2 outer executing thread: "
+                << std::this_thread::get_id() << "\n";
+    mutex.unlock();
+    return std::async(
+        std::launch::deferred,
+        [&](int v) {
+            mutex.lock();
+            std::cout << "result2 inner executing thread: "
+                        << std::this_thread::get_id() << "\n";
+            mutex.unlock();
+            return v;
+        },
+        810);
+});
+
+/* 套娃：在异步内执行懒执行 */
+auto result3 = std::async(std::launch::deferred, [&]() {
+    mutex.lock();
+    std::cout << "result3 executing thread: " << std::this_thread::get_id()
+                << "\n";
+    mutex.unlock();
+});
+std::async(std::launch::async, [&]() {
+    mutex.lock();
+    std::cout << "result3 executor thread: " << std::this_thread::get_id()
+                << "\n";
+    mutex.unlock();
+    result3.get();
+}).get();
+
+result0.wait();
+mutex.lock();
+std::cout << "result0 = " << result0.get() << "\n";
+mutex.unlock();
+
+result1.wait();
+mutex.lock();
+std::cout << "result1 = " << result1.get() << "\n";
+mutex.unlock();
+
+auto temp = result2.get();
+temp.wait();
+mutex.lock();
+std::cout << "result2 = " << temp.get() << "\n";
+mutex.unlock();
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+main thread: 36372
+result0 executing thread: 34364
+result3 executor thread: 31032
+result3 executing thread: 31032
+result2 outer executing thread: 25584
+result0 = 114514
+result1 executing thread: 36372
+result1 = 1919
+result2 inner executing thread: 36372
+result2 = 810
+```
+
+#### (8) 智能指针
+
+`<memory>`头文件下定义了三个智能指针类：`unique_ptr<T>:typ`类（唯一指针）、`shared_ptr<T>:typ`类（强引用计数指针）和`weak_ptr<T>:typ`类（弱引用计数指针）。智能指针的原理如下：
+
+```cpp [main.cpp]
+/* 类似于 unique_ptr<T> 类的极简唯一指针 */
+template <typename T>
+class RefCell {
+    private:
+        T *value;
+
+        RefCell() = delete;
+
+        /* 禁止拷贝 */
+        RefCell(const RefCell &) = delete;
+        RefCell &operator=(const RefCell &) = delete;
+
+    public:
+        RefCell(T *value) : value(value) {}
+
+        /* 析构时释放指针 */
+        ~RefCell() { delete value; }
+
+        /* 重载运算符 */
+        T *operator->() const { return value; } // [!code highlight]
+        T &operator*() const { return *value; } // [!code highlight]
+};
+
+/* 测试用的类 */
+class Entity {
+    private:
+        int value;
+        Entity() = delete;
+
+    public:
+        Entity(int value) : value(value) {
+            std::cout << "entity constructed\n";
+        }
+        ~Entity() { std::cout << "entity destructed\n"; }
+
+        int Value() const { return value; }
+        void Value(int value) { this->value = value; }
+};
+
+int main() {
+    {
+        auto temp = RefCell<Entity>(new Entity(114));
+
+        /* 测试读取 */
+        std::cout << "value = " << temp->Value() << "\n";
+
+        /* 测试写入 */
+        (*temp).Value(514);
+        std::cout << "value = " << temp->Value() << "\n";
+
+        temp->Value(1919);
+        std::cout << "value = " << (*temp).Value() << "\n";
+    } // <-- 作用域结束，temp 应该被析构
+
+    std::cout << "test\n";
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity constructed
+value = 114
+value = 514
+value = 1919
+entity destructed
+test
+```
+
+上述代码中重载了两个运算符：`->`（成员访问运算符）和`*`（解引用运算符）。`operator->():fun`必须是成员函数，并且要么返回一个指针，要么返回一个同样重载了`->`运算符的实例。不含任何形参的`operator*():fun`也必须是成员函数（含有形参就变成了乘法运算符）。
+
+`unique_ptr<T>:typ`类代表唯一指针，仅可移动不可复制，实例析构时自动释放指针。该类的成员函数如下：
+
+|       函数名        |               作用               |
+| :-----------------: | :------------------------------: |
+|     `get():fun`     |             返回指针             |
+| `get_deleter():fun` |          返回指针释放器          |
+|   `release():fun`   |    返回指针并放弃对其的所有权    |
+|    `reset():fun`    | 重设接管的指针，并释放之前的指针 |
+
+实际上`unique_ptr<T>:typ`类实际定义是`unique_ptr<T, D>:typ`，第二个泛型参数就是指针释放器，只不过标准库为一般类型提供了默认指针释放器。默认的指针释放器为`default_delete<T>:typ`类，其原理如下：
+
+```cpp [main.cpp]
+/* 指针释放器 */
+template <typename T>
+class PointerReleaser {
+    public:
+        /* 重载函数调用运算符 */
+        void operator()(T *pointer) { delete pointer; } // [!code highlight]
+};
+
+class Entity {
+    public:
+        Entity() { std::cout << "entity constructed\n"; }
+        ~Entity() { std::cout << "entity destructed\n"; }
+};
+
+int main() {
+    {
+        auto temp =
+            std::unique_ptr<Entity, PointerReleaser<Entity>>(new Entity);
+    }
+
+    std::cout << "test\n";
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity constructed
+entity destructed
+test
+```
+
+实际上标准库添加了`default_delete<T>:typ`类的一个特化`default_delete<T[]>:typ`类，使用`delete[]:kwd`运算符来释放数组指针，但多维数组就必须使用自定义的指针释放器。
+
+```cpp [main.cpp]
+class Entity {
+    public:
+        Entity() { std::cout << "entity constructed\n"; }
+        ~Entity() { std::cout << "entity destructed\n"; }
+};
+
+/* 自定义指针释放器 */
+template <std::size_t S>
+class PointerReleaser {
+    public:
+        void operator()(Entity **p) {
+            for (int i = 0; i < S; i++) {
+                delete[] p[i];
+            }
+            delete[] p;
+        }
+};
+
+int main() {
+    {
+        /* 使用默认指针释放器 */
+        auto temp = std::unique_ptr<Entity[]>(new Entity[5]);
+    }
+
+    std::cout << "test\n";
+
+    {
+        /* 测试二维数组 */
+        auto p = new Entity *[2];
+        p[0] = new Entity[3];
+        p[1] = new Entity[3];
+        auto temp = std::unique_ptr<Entity *, PointerReleaser<2>>(p);
+    }
+
+    std::cout << "test\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity constructed
+entity constructed
+entity constructed
+entity constructed
+entity constructed
+entity destructed
+entity destructed
+entity destructed
+entity destructed
+entity destructed
+test
+entity constructed
+entity constructed
+entity constructed
+entity constructed
+entity constructed
+entity constructed
+entity destructed
+entity destructed
+entity destructed
+entity destructed
+entity destructed
+entity destructed
+test
+```
+
+`shared_ptr<T>:typ`类是基于引用计数的智能指针，允许移动/拷贝。实例创建时引用计数为 1，移动时引用计数不变，拷贝时引用计数 +1，析构/调用`reset():fun`时引用计数 -1。若引用计数为 0，则释放指针。
+
+```cpp [main.cpp]
+class Entity {
+    public:
+        Entity() { std::cout << "entity constructed\n"; }
+        ~Entity() { std::cout << "entity destructed\n"; }
+};
+
+int main() {
+    {
+        /* 查看初始引用计数 */
+        auto temp = std::shared_ptr<Entity>(new Entity); // [!code highlight]
+        std::cout << "reference count = " << temp.use_count() << "\n";
+
+        /* 拷贝捕获 */
+        std::thread([=]() {
+            std::cout << "reference count = " << temp.use_count() << "\n";
+        }).join();
+        std::cout << "reference count = " << temp.use_count() << "\n";
+
+        /* 移动 */
+        auto movedTemp = std::move(temp);
+        std::cout << "reference count = " << movedTemp.use_count() << "\n";
+    }
+
+    std::cout << "test\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity constructed
+reference count = 1
+reference count = 2
+reference count = 1
+reference count = 1
+entity destructed
+test
+```
+
+需要注意的是，`shared_ptr<T>:typ`类是**部分**线程安全的。引用计数是线程安全的，但对其接管的指针的访问不是线程安全的。`shared_ptr<T>:typ`类还有多个构造函数：
+
+```cpp [main.cpp]
+class Entity {
+    public:
+        int value; // [!code ++]
+        Entity() : value(114) { std::cout << "entity constructed\n"; }
+        ~Entity() { std::cout << "entity destructed\n"; }
+};
+
+int main() {
+    {
+        /* 唯一指针转换为引用计数指针 */
+        auto temp = std::unique_ptr<Entity>(new Entity);
+        auto sharedTemp = std::unique_ptr<Entity>(std::move(temp));
+    }
+    {
+        /* 指定指针释放器 */
+        auto temp1 =
+            std::shared_ptr<Entity>(new Entity, std::default_delete<Entity>());
+
+        {
+            /* 指向其它智能指针接管指针的成员的智能指针 */
+            auto temp2 = std::shared_ptr<int>(temp1, &temp1->value); // [!code highlight]
+            std::cout << "temp1 rc = " << temp1.use_count() << "\n";
+            std::cout << "temp2 rc = " << temp2.use_count() << "\n";
+
+            /* 测试对该指针的修改会不会反馈至原有指针 */
+            *temp2 = 1919810;
+            std::cout << "temp1->value = " << temp1->value << "\n";
+        }
+    }
+
+    std::cout << "test\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+>  cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity constructed
+entity destructed
+entity constructed
+temp1 rc = 2
+temp2 rc = 2
+temp1->value = 1919810
+entity destructed
+test
+```
+
+除了使用`shared_ptr<T>:typ`类的构造函数外，还可以使用`make_shared<T, Args...>():fun`函数。
+
+```cpp
+class Entity {
+    private:
+        int a;
+        int b;
+        int c;
+        int d;
+
+        Entity() = delete;
+
+    public:
+        Entity(int a, int b, int c, int d) : a(a), b(b), c(c), d(d) {}
+        ~Entity() {}
+};
+
+/* 利用函数重载 + 类型推断，自动选择对应的构造函数 */
+auto temp = std::make_shared<Entity>(114, 514, 1919, 810);
+```
+
+`weak_ptr<T>:typ`类也是一种引用计数的智能指针，但它是弱引用计数的。`shared_ptr<T>:typ`实例会保存两种计数：强引用计数和弱引用计数。当强引用计数减少至 0 时就会释放其托管的指针，不论此时弱引用计数是否为 0。`weak_ptr<T>:typ`实例构造时，需要一个`weak_ptr<T>:typ`实例或者`shared_ptr<T>:typ`实例。
+
+```cpp [main.cpp]
+class Entity {
+    public:
+        Entity() { std::cout << "entity constructed\n"; }
+        ~Entity() { std::cout << "entity destructed\n"; }
+};
+
+int main() {
+    /* 不指向任何指针的弱引用智能指针 */
+    auto weakTemp = std::weak_ptr<Entity>();
+    {
+        /* 强引用智能指针 */
+        auto temp = std::shared_ptr<Entity>(new Entity);
+
+        /* 从 shared_ptr 构造一个弱引用 */
+        auto weakTemp2 = std::weak_ptr<Entity>(temp);
+
+        /* 运算符重载 */
+        weakTemp = temp;
+
+        /* 拷贝构造 */
+        auto weakTemp3 = std::weak_ptr<Entity>(weakTemp);
+
+        /* 弱引用智能指针是否已过期 */
+        std::cout << "weakTemp expired = " << weakTemp.expired() << "\n";
+
+        /* 查看强引用计数 */
+        std::cout << "weakTemp rc = " << weakTemp.use_count() << "\n";
+        std::cout << "temp rc = " << temp.use_count() << "\n";
+    }
+
+    std::cout << "test\n";
+
+    std::cout << "weakTemp expired = " << weakTemp.expired() << "\n";
+    std::cout << "weakTemp rc = " << weakTemp.use_count() << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+entity constructed
+weakTemp expired = 0
+weakTemp rc = 1
+temp rc = 1
+entity destructed
+test
+weakTemp expired = 1
+weakTemp rc = 0
+```
+
+`weak_ptr<T>:typ`实例不能直接访问接管的指针，必须调用`lock():fun`函数“升级”成`shared_ptr<T>:typ`实例。如果接管的指针已被释放，则`lock():fun`函数返回的`shared_ptr<T>:typ`实例将指向`nullptr:kwd`。同样地，`weak_ptr<T>:typ`类的引用计数也是线程安全的。
+
+#### (9) 泛型约束
+
+C++ 11 标准下的泛型约束是通过元编程实现的。上文的`ratio<N, D>:typ`类就是一种元编程类型。C++ 11 新增了`<type_traits>`头文件，利用该头文件内的类即可实现比较简陋的泛型约束。
+
+```cpp
+template <typename T>
+T max(T a, T b) {
+    /* 编译期检查：必须是算数类型 */
+    static_assert(std::is_arithmetic<T>::value); // [!code highlight]
+    return a > b ? a : b;
+}
+
+template <typename T>
+T max(T a, T b, T list...) {
+    static_assert(std::is_arithmetic<T>::value); // [!code highlight]
+    return a > b ? max(a, list) : max(b, list);
+}
+```
+
+关于更多元编程类请参见 CPP Reference 的[元编程库](https://zh.cppreference.com/w/cpp/meta "点击跳转")。
+
+#### (10) 杂项
+
+|       头文件名       |        功能        |
+| :------------------: | :----------------: |
+|      `<random>`      |     随机数支持     |
+|      `<regex>`       |   正则表达式支持   |
+|   `<system_error>`   |  系统错误处理支持  |
+| `<scoped_allocator>` | 有作用域分配器支持 |
+|    `<typeindex>`     |   运行时类型支持   |
+
+## 三、C++ 14 标准
+
+> C++ 14 是主要版本 C++ 11 之后的一个次要版本，主要是一些小的改进和缺陷修复。
+
+### 1. 核心特性
+
+#### (1) 变量模板
+
+现在变量也可以做泛型了：
+
+```cpp
+/* 变量模板（未初始化前不占用空间） */
+template <typename T, int... values>
+T troll = T{values...};
+
+int main() {
+    for (auto &v : troll<std::vector<int>, 1, 2, 3, 4, 5, 6>) {
+        std::cout << v << " ";
+    }
+    std::cout << "\n";
+
+    return 0;
+}
+```
+
+#### (2) lambda 表达式改进
+
+现在，如果 lambda 表达式的形参列表里含有`auto:kwd`类型，则该 lambda 表达式是隐式泛型 lambda 表达式。
+
+```cpp [main.cpp]
+auto lambda = [](auto a, auto b) { return a + b; };
+
+std::cout << lambda(114, 514) << "\n";
+std::cout << lambda(std::string("1919"), std::string("810")) << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+628
+1919810
+```
+
+此外，lambda 表达式的捕获列表可以带有初始化器了。
+
+```cpp
+std::vector<int> path;
+int i = 0;
+
+auto lambda = [&p = path, i = i + 1]() { // [!code highlight]
+    p.push_back(i);
+    return i;
+};
+
+auto decorator(std::string prefix, std::string suffix) {
+
+    /* 利用 move() 函数减少拷贝开销 */
+    return [pre = std::move(prefix), suf = std::move(suffix)](std::string v) { // [!code highlight]
+        return pre + v + suf;
+    };
+};
+```
+
+其中，引用`p:var`是对变量`path:var`的引用，类似于直接在 lambda 表达式里按引用捕获`path:var`。捕获列表里的`i:var`则不会影响外部的`i:var`。
+
+#### (3) 数字字面量改进
+
+现在，允许使用`'`分割数字字面量（编译器会自动忽略`'`），也允许使用二进制字面量。
+
+```cpp
+int senpai = 11'4514;   // 使用 ' 做分割，更直观
+int x = 0b1111101;      // 二进制字面量
+```
+
+此外，`<chrono>`头文件下提供了适用于数字字面量的后缀重载，以更好地表示时间：
+
+```cpp
+/* 必需 */
+using namespace std::chrono_literals;
+
+/* 均属于 duration 类型 */
+auto a = 10s;       // 10 秒
+auto b = 11min;     // 11 分钟
+auto c = 12h;       // 12 小时
+```
+
+#### (4) 函数返回类型推导
+
+现在，`auto:kwd`可以作为函数返回类型，编译器会自动推导其实际返回类型。
+
+```cpp
+/* 自动类型推导：int */
+static auto max(int a, int b) { return a > b ? a : b; }
+```
+
+### 2. 库功能特性
+
+#### (1) `make_unique<T, Args...>():fun`函数
+
+现在唯一智能指针也可以不通过构造函数创建了。
+
+```cpp
+class Entity {
+    private:
+        int a;
+        int b;
+        int c;
+        int d;
+
+        Entity() = delete;
+
+    public:
+        Entity(int a, int b, int c, int d) : a(a), b(b), c(c), d(d) {}
+        ~Entity() {}
+};
+
+// [!code word:make_unique]
+auto temp = std::make_unique<Entity>(114, 514, 1919, 810);
+```
+
+#### (2) 读写锁
+
+C++ 14 标准新增了`<shared_mutex>`头文件，该头文件下定义了 2 个类：`shared_timed_mutex:typ`类（限时读写锁）和`shared_lock<T>:typ`类（读写锁守卫）。
+
+```cpp [main.cpp]
+int sum = 0;
+
+std::vector<std::thread> threads;   // 暂存线程实例
+std::shared_timed_mutex mutex;      // 限时读写锁 // [!code highlight]
+std::mutex ioMutex;                 // 控制标准输出的锁
+
+/* 类似于线程屏障 */
+std::promise<void> cv;
+std::shared_future<void> barrier = cv.get_future().share();
+
+for (int i = 0; i < 20; i++) {
+    threads.push_back(std::thread([&, i]() {
+        barrier.wait();
+        if (i % 2 == 0) {
+            /* 排他性锁定（获取写锁） */
+            std::lock_guard<std::shared_timed_mutex> guard(mutex); // [!code highlight]
+            sum += i + 1;
+
+            /* 等价于： */
+            // mutex.lock();
+            // sum += i + 1;
+            // mutex.unlock();
+        } else {
+            int temp = 0;
+            {
+                /* 共享性锁定（获取读锁） */
+                std::shared_lock<std::shared_timed_mutex> guard(mutex); // [!code highlight]
+                temp = sum;
+
+                /* 等价于： */
+                // mutex.lock_shared();
+                // temp = sum;
+                // mutex.unlock_shared();
+            }
+
+            std::lock_guard<std::mutex> guard(ioMutex);
+            std::cout << "thread " << i << ": sum = " << temp << "\n";
+        }
+    }));
+}
+
+cv.set_value();
+std::this_thread::sleep_for(std::chrono::seconds(2));
+
+for (auto &v : threads) {
+    v.join();
+}
+
+std::cout << "sum = " << sum << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+thread 3: sum = 1
+thread 1: sum = 9
+thread 5: sum = 16
+thread 9: sum = 25
+thread 11: sum = 36
+thread 13: sum = 49
+thread 15: sum = 49
+thread 19: sum = 85
+thread 7: sum = 85
+thread 17: sum = 85
+sum = 100
+```
+
+## 四、C++ 17 标准
+
+> C++17 是小版本 C++14 之后的一个大版本，它提供了新的语言和库功能特性。
+
+### 1. 核心特性
+
+#### (1) lambda 表达式改进
+
+现在，lambda 表达式可以拷贝捕获`this:kwd`代表的对象（前提是该类必须可拷贝）。
+
+```cpp [main.cpp]
+class Cache {
+    private:
+        int value;
+
+        /* 用于存放 lambda 表达式 */
+        std::function<int()> f;
+
+        Cache() = delete;
+
+    public:
+        Cache(int value) : value(value), f(nullptr) {}
+        ~Cache() {}
+
+        int Value() const { return this->value; }
+        void Value(int value) {
+            this->Save();
+            this->value = value;
+        }
+
+        void Save() {
+            /* 拷贝捕获 */
+            this->f = [*this]() { return this->value; }; // [!code highlight]
+        }
+        int OldValue() {
+            if (this->f == nullptr) throw std::runtime_error("cache not saved");
+
+            return this->f();
+        }
+};
+
+int main() {
+    Cache a(114);
+    a.Value(514);
+
+    std::cout << "value = " << a.Value() << "\n";
+    std::cout << "old value = " << a.OldValue() << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+value = 514
+old value = 114
+```
+
+此外，现在 lambda 表达式也可以被`constexpr:kwd`关键字修饰。
+
+```cpp
+constexpr auto sum = [](auto a, auto b) { return a + b; };
+```
+
+#### (2) `if:kwd`与`switch:kwd`语句改进
+
+现在`if:kwd`和`switch:kwd`语句允许带初始化语句。下面以`if:kwd`语句为例：
+
+```cpp [main.cpp]
+static inline void test(const char *input) {
+    int num = 0;
+
+    /* 初始化语句为“int n = sscanf(input, "%d", &num);” */
+    /* 判断条件为“n == 0” */
+    if (int n = sscanf(input, "%d", &num); n == 0) { // [!code highlight]
+        std::cout << "not match\n";
+    } else if (n == EOF) {
+        std::cout << "end of file\n";
+    } else {
+        std::cout << "read: num = " << num << "\n";
+    }
+}
+
+int main() {
+    test("abc\0");
+    test("\0");
+    test("114514\0");
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+not match
+end of file
+read: num = 114514
+```
+
+此外，当`if:kwd`语句的条件被`constexpr:kwd`修饰时，该语句将在编译期被处理。
+
+```cpp [main.cpp]
+// [!code word:constexpr]
+template <typename T>
+T copyOrMove(T &a) {
+    if constexpr (std::is_copy_constructible<T>::value) { // [!code highlight]
+        return T(a);
+    } else if constexpr (std::is_move_constructible<T>::value) {
+        return T(std::forward(a));
+    } else {
+        static_assert(false, "cannot copy or move instance");
+    }
+}
+
+int main() {
+    int a = 114;
+    int b = copyOrMove(a);
+
+    auto c = std::unique_ptr<int>(new int{514});
+    auto d = copyOrMove(c);
+
+    std::cout << "a = " << a << "\n";
+    std::cout << "b = " << b << "\n";
+    std::cout << "c == nullptr is " << (c == nullptr) << "\n";
+    std::cout << "*d = " << *d << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+a = 114
+b = 114
+c == nullptr is 1
+*d = 514
+```
+
+#### (3) 元编程改进
+
+利用 C++ 14 标准提供的变量模板，元编程类现在可以直接使用更便利的变量。
+
+```cpp
+// [!code word:is_copy_constructible_v]
+// [!code word:is_move_constructible_v]
+template <typename T>
+T copyOrMove(T &a) {
+
+    /* 注意，此处使用的是变量模板，多了一个 “_v” */
+    if constexpr (std::is_copy_constructible_v<T>) {
+        return T(a);
+    } else if constexpr (std::is_move_constructible_v<T>) {
+        return T(std::forward(a));
+    } else {
+        static_assert(false, "cannot copy or move instance");
+    }
+}
+
+/* 元编程类对应的变量模板似如下定义 */
+// template<typename T>
+// constexpr bool is_lvalue_reference_v = is_lvalue_reference<T>::value;
+```
+
+#### (4) 结构化绑定
+
+结构化绑定类似于解构赋值。结构化绑定中必须使用`auto:kwd`关键字声明各个变量的类型。
+
+```cpp [main.cpp]
+/* 必须是编译时大小可知的数组 */
+int array[2]{114, 514};
+
+/* 复制自原数组，元素个数必须相等 */
+auto [a, b] = array; // [!code highlight]
+a = 114514;
+std::cout << array[0] << " " << array[1] << "\n";
+
+/* 引用自原数组 */
+auto &[c, d] = array; // [!code highlight]
+c = 1919;
+d = 810;
+std::cout << array[0] << " " << array[1] << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+114 514
+1919 810
+```
+
+结构化绑定允许`=`右侧为：
+
+- 编译时大小确定的数组
+- `tuple<T...>:typ`（元组）实例，或实现元组操作的实例
+- 成员变量均非匿名联合体且均为`public:kwd`的类
+
+```cpp
+std::tuple<int, float, std::string> tuple{114, 51.4, "1919810"};
+auto [a, b, c] = tuple; // [!code highlight]
+
+
+class Entity {
+    public:
+        int a;
+        int b;
+        int c;
+};
+
+Entity entity{1, 2, 3};
+auto [d, e, f] = entity; // [!code highlight]
+```
+
+#### (5) 纯右值语义
+
+在 C++ 17 标准下，若非必要，则纯右值不会实质化，并且它会被直接构造至最终目标。
+
+```cpp [main.cpp]
+/* 测试用 */
+class Entity {
+    public:
+        /* 构造函数 */
+        Entity() { std::cout << "constructed\n"; }
+
+        /* 拷贝构造函数 */
+        Entity(const Entity &) { std::cout << "copy constructed\n"; }
+
+        /* 移动构造函数 */
+        Entity(Entity &&) { std::cout << "move constructed\n"; }
+
+        /* 拷贝赋值运算符 */
+        Entity &operator=(const Entity &) {
+            std::cout << "copy assigned\n";
+            return *this;
+        }
+
+        /* 移动赋值运算符 */
+        Entity &operator=(Entity &&) {
+            std::cout << "move assigned\n";
+            return *this;
+        }
+
+        /* 析构函数 */
+        ~Entity() { std::cout << "destructed\n"; }
+};
+
+/* 纯右值套娃 */
+Entity fun1() { return Entity(); }
+Entity fun2() { return fun1(); }
+
+int main() {
+    Entity entity = fun2();
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+constructed
+destructed
+```
+
+#### (6) 泛型改进
+
+C++ 17 标准引入了折叠表达式。
+
+```cpp [main.cpp]
+template <typename T, typename... U>
+T sum(U... a) {
+    /* 必须可以从类型 U 转换至类型 T */
+    /* 右折叠表达式 */
+    static_assert((std::is_convertible_v<U, T> && ...), "type not convertible"); // [!code highlight]
+
+    /* 右折叠表达式 */
+    return (a + ...); // [!code highlight]
+
+    /* 左折叠表达式 */
+    // return (... + a) // [!code highlight]
+}
+
+int main() {
+    std::cout << sum<int>(114, 514, 1919, 810) << "\n";
+
+    std::cout << sum<std::string>(std::string("114"), std::string("514"),
+                                  std::string("1919"), std::string("810"))
+              << "\n";
+
+    /* 等价于 */
+    // std::string("114") + (std::string("514")
+    // + (std::string("1919") + std::string("810")))
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+3357
+1145141919810
+```
+
+左折叠表达式与右折叠表达式的区别在于运算顺序不同，前者是正常运算顺序（从左至右），后者是从右向左运算（但参与运算的变量顺序不变）。
+
+除此之外，现在泛型可以（尽可能地）自动推导实参类型：
+
+```cpp
+/* 自动推导为 vector<int> */
+std::vector v{114, 514};
+
+/* 自动推导为 pair<int, const char*> */
+auto a = std::make_pair(114, "514");
+```
+
+如果编译器无法推导类型则会报错。例如，智能指针不能使用自动推导，因为所有的智能指针都有一个对应的数组特化泛型，它们的构造函数参数都是一个指针。
+
+### 2. 库功能特性
+
+#### (1) 类型擦除包装器
+
+在头文件`<any>`下定义了一个类`any:typ`，该类可以保存任何可**复制构造**的单个值且确保类型安全。
+
+```cpp
+/* 创建 any 实例 */
+std::any a = std::make_any<int>(114);
+
+/* 类型安全的转换，
+ 若类型不严格一致则抛出错误 */
+int b = std::any_cast<int>(a);
+
+/* 赋值运算符重载，替换内部值 */
+a = std::string("114514");
+
+/* 调用成员函数，替换内部值 */
+a.emplace<std::vector<int>>({114, 514});
+```
+
+`any:typ`类还有两个成员函数：`reset():fun`和`has_value():fun`，前者用于销毁内部值，后者用于检查是否有内部值。
+
+`variant<T...>:typ`类定义于`<variant>`头文件下，该泛型类表示一个类型安全的联合体（`union:kwd`）。该类的实例不能保存引用和数组，也不能不保存任何值（除非赋值时发生了异常）或不能析构的值。它的用法有点像`tuple<T...>:typ`类：
+
+```cpp
+/* 创建 variant 实例，允许声明同一类型多次 */
+auto a = std::variant<int, std::string, float, std::string>(
+    std::in_place_index_t<3>(), "114514");
+
+/* 获取索引为 3 的值，如果内部值不位于此
+ 索引，则抛出错误 */
+std::string str = std::get<3>(a);
+
+/* 将内部值替换为索引 2 的值，并给定构造参数 */
+a.emplace<2>(114514);
+
+/* 获取当前内部值的索引 */
+std::cout << a.index() << "\n";
+
+/* 利用泛型 lambda 访问内部值 */
+std::visit([](auto v) { std::cout << v << "\n"; }, a);
+
+/* 获取索引为 0 的值，如果内部值不位于此
+ 索引，则返回 nullptr */
+const int *p = std::get_if<0>(&a);
+std::cout << (p == nullptr) << "\n";
+```
+
+`variant<T...>:typ`实例也允许直接使用移动赋值运算符以设置其内部值，但必须确保适合的索引唯一。例如，上述代码中为变量`a:var`赋值一个`string:typ`实例会导致错误，因为适合的索引有两个：`1`和`3`。`variant<T...>:typ`类还有一个成员函数`valueless_by_exception():fun`，该函数仅在实例不保存任何值时返回`true:kwd`。如果`variant<T...>:typ`实例需要保存一个无法被构造的类型的初始值，则可以将`monostate:typ`类设置为索引为 0 的类型。
+
+`optional<T>:typ`类定义在`<optional>`头文件下，代表一个可能存在也可能不存在的值。其优点在于可以很好地处理构造开销大的对象。
+
+```cpp
+/* 创建 optional 实例 */
+auto a = std::make_optional(114514);
+
+/* 赋值运算符，替换内部值 */
+a = 1919;
+
+/* 获取内部值，如果没有内部值则抛出错误 */
+std::cout << a.value() << "\n";
+
+/* 删除内部值 */
+a.reset();
+
+/* 检查是否含有内部值 */
+std::cout << a.has_value() << "\n";
+
+/* 获取内部值，如果没有内部值则返回实参 */
+std::cout << a.value_or(810) << "\n";
+```
+
+`optional<T>:kwd`类重载了`->`（成员访问）运算符和`*`（解引用）运算符，如果内部值是某个类的实例，则可以直接通过这两个运算符访问实例成员。
+
+#### (2) 通用文件系统
+
+C++ 17 标准的`<filesystem>`头文件为不同平台的文件系统提供统一接口。
+
+```cpp
+/* 代表一个路径（可以不存在） */
+std::filesystem::path p("../build");
+
+/* 代表一个文件（也可以是目录），可以不存在 */
+std::filesystem::directory_entry file(p);
+std::cout << file.is_directory() << "\n";
+
+/* 获取目录迭代器（非递归） */
+std::filesystem::directory_iterator iter(p);
+
+/* v 是 directory_entry& 类型 */
+for (auto &v : iter) {
+
+    /* 打印路径（相对于给定路径的）和权限 */
+    std::cout << v.path() << " " << (std::uint32_t)v.status().permissions()
+                << "\n";
+}
+```
+
+`<filesystem>`头文件下定义的类含义如下：
+
+|                类名                |       含义       |
+| :--------------------------------: | :--------------: |
+|             `path:typ`             |  路径（字符串）  |
+|       `directory_entry:typ`        |    文件/目录     |
+|      `directory_iterator:typ`      | 非递归目录迭代器 |
+| `recursive_directory_iterator:typ` |  递归目录迭代器  |
+|         `file_status:typ`          |  文件类型与权限  |
+
+该头文件下还定义了如下函数：
+
+|              函数名              |                  作用                  |
+| :------------------------------: | :------------------------------------: |
+|         `absolute():fun`         |             转换为绝对路径             |
+|        `canonical():fun`         |   转换为绝对规范路径（路径必须存在）   |
+|     `weakly_canonical():fun`     |  转换为绝对规范路径（路径可以不存在）  |
+|       `current_path():fun`       |         设置或返回当前工作路径         |
+|   `temp_directory_path():fun`    |          获取临时文件目录位置          |
+|         `relative():fun`         | 计算从给定路径到另一给定路径的相对路径 |
+|           `copy():fun`           |             复制文件/目录              |
+|        `copy_file():fun`         |                复制文件                |
+|       `copy_symlink():fun`       |              复制符号链接              |
+|     `create_directory():fun`     |             非递归创建目录             |
+|    `create_directories():fun`    |              递归创建目录              |
+|     `create_hard_link():fun`     |               创建硬链接               |
+|      `create_symlink():fun`      |           创建文件的符号链接           |
+| `create_directory_symlink():fun` |           创建目录的符号链接           |
+|          `exists():fun`          |            检查路径是否存在            |
+|        `equivalent():fun`        |       检查两个路径是否为同一路径       |
+|       `read_symlink():fun`       |         获取符号链接指向的路径         |
+|          `remove():fun`          |            删除文件或空目录            |
+|        `remove_all():fun`        |              递归删除目录              |
+|          `rename():fun`          |             移动文件或目录             |
+
+`path:typ`类重载了`/`（除法）运算符，使路径或字符串可以通过`/`运算符拼接。
+
+```cpp
+std::string str("1.txt");
+std::filesystem::path p =
+    std::filesystem::current_path() / ".." / "build" / str;
+```
+
+如果被拼接的字符串内含有多个`"/":str`字符，则多余的`"/":str`会被忽略。如果构造`path:typ`实例的路径是空字符串，则会默认为当前工作路径。
+
+#### (3) 杂项
+
+|      头文件名       |                      功能                      |
+| :-----------------: | :--------------------------------------------: |
+|    `<charconv>`     |          改进的数字/字符互相转换支持           |
+|   `<string_view>`   |              字面量字符串的封装类              |
+|    `<execution>`    | 算法库执行策略控制支持（顺序执行、并行执行等） |
+| `<memory_resource>` |                  抽象内存资源                  |
+
+## 五、C++ 20 标准
+
+> C++20 是 C++17 之后的一个大版本，提供了一些重要功能特性（概念、模块、协程和范围）以及其他的语言和库特性。
+
+### 1. 核心特性
+
+#### (1) 特性测试宏
+
+现在可以使用宏以确定哪些特性是适用的（需包含`<version>`头文件）：
+
+```cpp
+#include <iostream>
+
+#ifdef __cpp_lib_filesystem // [!code highlight]
+
+/* 如果库功能支持 <filesystem> */
+#include <filesystem>
+
+#else
+
+/* 不支持那就用 POSIX */
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#endif
+
+int main() {
+
+#ifdef __cpp_lib_filesystem // [!code highlight]
+
+    std::filesystem::path p("../build");
+
+    std::filesystem::directory_iterator iter(p);
+    for (auto &v : iter) {
+        std::cout << v.path() << " " << (std::uint32_t)v.status().permissions()
+                  << "\n";
+    }
+
+#else
+
+    DIR *dir = opendir("../build");
+    dirent *ite = readdir(dir);
+    struct stat a;
+    while (ite != nullptr) {
+        stat(ite->d_name, &a);
+        std::cout << ite->d_name << " " << a.st_mode << "\n";
+
+        ite = readdir(dir);
+    }
+    closedir(dir);
+
+#endif
+
+    return 0;
+}
+```
+
+其中，`__cpp_lib_filesystem:kwd`就是特性测试宏之一。特性测试宏包含属性特性测试宏、核心特性测试宏和库功能测试宏，关于更多特性测试宏，请参见 CPP Reference 的[功能特性测试](https://zh.cppreference.com/w/cpp/feature_test "点击跳转")。
+
+#### (2) 比较改进
+
+现在，引入`<compare>`头文件后可以使用`<=>`（三路比较）运算符并重载之。
+
+```cpp
+int a = 114, b = 514, c = 114, d = 0;
+
+/* 以下均输出 1 */
+std::cout << ((a <=> b) == std::strong_ordering::less) << "\n";
+std::cout << ((a <=> c) == std::strong_ordering::equal) << "\n";
+std::cout << ((a <=> d) == std::strong_ordering::greater) << "\n";
+```
+
+使用三路比较运算符时需要注意，以下情况可能会导致未定义行为：
+
+- 参与运算的两个值中，一个是`bool:kwd`类型而另一个不是
+- 需要进行窄化转换以进行比较（除了整数类型转换为浮点数类型以外）
+
+若参与运算时的值（即隐式类型转换后的值）是整数类型，则返回`strong_ordering:typ`类的实例；若为浮点数类型，则返回`partial_ordering:typ`类的实例。`<compare>`头文件下还定义了一个类`weak_ordering:typ`。这三个类的区别如下：
+
+|          类名          | 相等即可替换 | 允许不可比较的值 | 必然是大于小于或等于 |
+| :--------------------: | :----------: | :--------------: | :------------------: |
+| `strong_ordering:typ`  |      是      |        否        |          是          |
+| `partial_ordering:typ` |    不保证    |        是        |          否          |
+|  `weak_ordering:typ`   |    不保证    |        否        |          是          |
+
+现在新增了类的默认比较操作符（大于/小于等运算符），可以是友元函数或成员函数，但需要显示指定为`default:kwd`，否则编译器不会为其添加实现。默认实现的比较顺序为
+
+1. 声明顺序的直接基类子对象
+2. 声明顺序的非静态数据成员
+
+#### (3) 聚合体列表初始化改进
+
+现在可以指定初始化聚合体时初始化哪个成员。
+
+```cpp
+class Entity {
+    public:
+        int a;
+        int b;
+        int c;
+        int d;
+};
+
+/* 成员 a, b 未初始化 */
+Entity a{.c = 114, .d = 514}; // [!code highlight]
+```
+
+#### (4) 带初始化语句的`for in:kwd`循环
+
+现在`for in:kwd`循环也可以使用初始化语句了。
+
+```cpp
+std::vector<int> vec{114, 514, 1919, 810};
+
+/* “int i = 0;”是初始化语句 */
+for (int i = 0; auto &v : vec) { // [!code highlight]
+    std::cout << "vec[" << i << "] = " << v << "\n";
+    i++;
+}
+```
+
+#### (5) lambda 表达式改进
+
+现在 lambda 表达式可以显式声明泛型形参、允许对包使用初始化器了。
+
+```cpp
+template <typename T, typename... U>
+auto decoratedLazySum(T prefix, T suffix, U... args) {
+
+    /* 对包使用初始化器，利用 move() 减少拷贝开销 */
+    return [... arg = std::move(args), prefix = std::move(prefix),
+            suffix = std::move(suffix)]() {
+        return prefix + (... + arg) + suffix;
+    };
+}
+
+/* 带泛型形参*/
+auto sum = []<typename... T>(T... args) { return (... + args); };
+
+std::cout << decoratedLazySum<int>(114, 514, 1919, 810)() << "\n";
+std::cout << sum(1919, 810) << "\n";
+```
+
+#### (6) 协程
+
+C++ 20 标准添加了对协程的支持（`<coroutine>`头文件）
+
+> 协程是能暂停执行以在之后恢复的函数。协程是无栈的：它们通过返回到调用方暂停执行，并且恢复执行所需的数据与栈分离存储。这样就可以编写异步执行的顺序代码（例如不使用显式的回调来处理非阻塞输入/输出），还支持作用于惰性计算的无限序列上的算法及其他用途。
+
+任意包含`co_await:kwd`关键字、`co_yield:kwd`关键字或`co_return:kwd`关键字的函数均为协程。协程可以是泛型的，但不能使用变长参数、`return:kwd`关键字和`auto:kwd`关键字，并且常量表达式函数、构造函数、析构函数和`main():fun`不能是协程。
+
+标准库只提供了协程框架，必须自己实现协程控制器和协程承诺类（注意，这个协程承诺类与`<future>`头文件下的`promise<T>:typ`类没有任何关系）。
+
+```cpp [main.cpp]
+/* 前置声明 */
+template <typename T>
+class Task;
+
+/* 协程控制器，继承自 coroutine_handle */
+template <typename T>
+class Handler : public std::coroutine_handle<Task<T>> {
+    public:
+        /* 必须定义 promise_type，嵌套类、 using 等均可 */
+        using promise_type = Task<T>; // [!code highlight]
+};
+
+/* 协程承诺类 */
+template <typename T>
+class Task {
+    public:
+        /* 非必需，此处用于暂存返回值 */
+        T value;
+
+        /* 必需，协程创建时调用 */
+        Handler<T> get_return_object() {
+            std::cout << "get_return_object()\n";
+            return Handler<T>(Handler<T>::from_promise(*this));
+        }
+
+        /* 必需，协程初始化时调用，可以返回新的协程实例 */
+        std::suspend_always initial_suspend() {
+            std::cout << "initial_suspend()\n";
+            return std::suspend_always();
+        }
+
+        /* 必需，协程结束时调用，可以返回新的协程实例 */
+        std::suspend_always final_suspend() noexcept {
+            std::cout << "final_suspend()\n";
+            return std::suspend_always();
+        }
+
+        /* 取决于协程是否有 co_yield，触发 co_yield 时调用 */
+        template <typename U>
+        std::suspend_always yield_value(U &&v) {
+            static_assert(std::is_constructible_v<T, U>,
+                          "cannot construct T by U");
+
+            std::cout << "yield_value() " << v << "\n";
+            this->value = T(std::forward<U>(v));
+            return std::suspend_always();
+        }
+
+        /* 取决于协程是否有 co_return 且有返回值，触发 co_return 时调用 */
+        template <typename U>
+        void return_value(U &&v) {
+            static_assert(std::is_constructible_v<T, U>,
+                          "cannot construct T by U");
+
+            std::cout << "return_value() " << v << "\n";
+            this->value = T(std::forward<U>(v));
+        }
+
+        /* 取决于协程是否有 co_return 且无返回值，触发 co_return 时调用 */
+        // void return_void() {}
+
+        /* 必需，协程抛出异常时调用 */
+        void unhandled_exception() {
+
+            /* 可调用 current_exception() 函数以获取异常指针 */
+
+            std::cout << "exception\n";
+        }
+};
+
+/* 协程 */
+Handler<int> range(int start, int step, int cycle) { // [!code highlight]
+    for (int i = 0; i < cycle; i++) {
+        co_yield start + i *step;
+    }
+    co_return 114514;
+}
+
+int main() {
+    /* 创建协程实例 */
+    auto handler = range(0, 5, 10);
+
+    std::vector<int> vec;
+
+    for (int i = 0; i <= 10; i++) {
+
+        /* 运行至协程挂起 */
+        handler();
+        /* 等价于： */
+        // handler.resume();
+
+        /* 获取协程结果，此处 promise() 函数的
+         返回类型为 Task<int> */
+        vec.push_back(handler.promise().value);
+    }
+
+    /* 销毁协程 */
+    handler.destroy();
+
+    for (int i = 0; i <= 10; i++) {
+        std::cout << vec[i];
+        if (i == 10) std::cout << "\n";
+        std::cout << " ";
+    }
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+get_return_object()
+initial_suspend()
+yield_value() 0
+yield_value() 5
+yield_value() 10
+yield_value() 15
+yield_value() 20
+yield_value() 25
+yield_value() 30
+yield_value() 35
+yield_value() 40
+yield_value() 45
+return_value() 114514
+final_suspend()
+0 5 10 15 20 25 30 35 40 45 114514
+```
+
+每个协程实例都含有：
+
+- 协程承诺实例。协程通过此实例返回结果或异常。
+- 协程控制器实例，用于在外部恢复协程实例执行或销毁协程实例。
+- 协程状态，用于保存协程上下文以便恢复执行。
+
+在上述代码中，调用`range():fun`后发生了：
+
+1. 使用`new:kwd`运算符分配协程控制块
+2. 拷贝实参至协程控制块（值传递的实参被移动/拷贝，**引用传递的实参保留为引用**）
+3. 调用协程承诺类的构造函数（如果此类的构造函数可以接收所有协程实参则调用之，否则调用默认构造函数）
+4. 调用协程承诺实例的`get_return_object():fun`函数并将结果暂存，首次协程挂起时返回给协程创建者
+5. 调用协程承诺实例的`initial_suspend():fun`函数并`co_await:kwd`其返回值
+
+由于以引用传递的实参仍保留为引用，因此使用协程时需要注意不要产生垂悬引用。上述代码中`initial_suspend():fun`的返回类型是`suspend_always:typ`。该类是空类，用于指示`co_await:kwd`始终暂停且不返回值。与之对应的类是`suspend_never:typ`，用于指示`co_await:kwd`绝不暂停且不返回值。两者的区别是，作为`initial_suspend():fun`返回类型时，前者会在协程创建后立即挂起，后者则是创建后持续执行至挂起点。若将上述代码中`initial_suspend():fun`的返回类型更改为`suspend_never:typ`，则`main():fun`函数内应做如下修改：
+
+```cpp
+vec.push_back(handler.promise().value); // [!code ++]
+
+for (int i = 0; i <= 10; i++) { // [!code --]
+for (int i = 0; i < 10; i++) { // [!code ++]
+    handler();
+    vec.push_back(handler.promise().value);
+}
+handler.destroy();
+```
+
+在协程实例执行过程中，若遇到`co_yield:kwd`关键字则会调用协程承诺实例的`yield_value():fun`函数，并传入被`co_yield:kwd`关键字修饰的表达式（复制/拷贝），然后`co_await:kwd`该函数的返回值。当遇到`co_return:kwd`关键字（或隐式退出，此时等价于`co_return:kwd`一个`void:kwd`的表达式）时则会：
+
+1. 判定`co_return:kwd`关键字修饰的表达式求值结果的类型，并执行下列之一：
+    - 为`void:kwd`类型：调用协程承诺实例的`return_void():fun`函数
+    - 不为`void:kwd`类型：调用协程承诺实例的`return_value():fun`函数并传入表达式
+2. 以栈（数据结构）的顺序销毁局部变量
+3. 调用协程承诺实例的`final_suspend():fun`方法并`co_await:kwd`其返回值
+
+从调用协程承诺实例的`initial_suspend():fun`函数开始，若协程实例内抛出了异常，则：
+
+1. 捕获异常并在`catch:kwd`块内调用线程控制实例的`unhandled_exception():fun`函数
+2. 调用协程承诺实例的`final_suspend():fun`方法并`co_await:kwd`其返回值
+
+协程执行结束、因异常而终止或调用协程控制器实例的`destroy():fun`函数时会销毁协程，其顺序为：
+
+1. 调用协程承诺实例的析构函数
+2. 调用实参的析构函数
+3. 使用`delete:kwd`释放协程状态
+4. 返回至协程的调用者
+
+`co_await:kwd`关键字可能会挂起协程，也可能不会。协程执行时，被`co_await:kwd`关键字修饰的表达式会被转换为一个*等待器*实例，其`await_ready():fun`成员函数的返回值若为`true:kwd`则协程不会被挂起，否则协程将被挂起。一个等待器必须有如下三个成员函数：`await_ready():fun`、`await_suspend():fun`和`await_resume():fun`。上文提到的`suspend_always:typ`类和`suspend_never:typ`类就是等待器类。C++ 20 标准允许重载`operator co_await():fun`运算符，该运算符可以将表达式转换为等待器实例。因此，`co_await:kwd`关键字的处理流程如下：
+
+1. 如果被修饰的表达式不是等待器实例，则利用运算符重载创建等待器实例，无法创建则编译期报错
+2. 调用等待器实例的`await_ready():fun`函数，若返回值为`true:kwd`则跳过流程 3，否则挂起协程并执行流程 3
+3. 调用等待器实例的`await_suspend():fun`函数，根据其返回值执行下列之一：
+    - 无返回值：返回协程调用者
+    - `true:kwd`：返回协程调用者
+    - `false:kwd`：恢复协程执行
+    - 其它协程控制器实例：调用该实例的`resume():fun`函数
+    - 抛出异常：恢复协程执行并重抛异常
+4. 协程再次恢复执行时，调用等待器实例的`await_resume():fun`函数，其返回值就是`co_await:kwd`表达式的结果
+5. 析构等待器实例，然后结束`co_await:kwd`表达式
+
+请注意，在多线程环境下，`await_suspend():fun`函数在执行时，有可能其它线程会“接管”此协程实例并重新执行之，这意味着`await_suspend():fun`函数执行期间`this:kwd`指向的实例随时都有可能析构。
+
+编译器通过`coroutine_traits<T, Args...>:typ`类（协程特征类）来确定协程承诺类。设协程的返回类型为`Task<T>:typ`，如果协程不是非静态成员函数，则其对应的协程承诺类型是`coroutine_traits<Task<T>, Args...>::promise_type:typ`类，否则，设协程是类`A:typ`的非静态成员函数，则其对应的协程承诺类型是`coroutine_traits<Task<T>, A&, Args...>::promise_type:typ`或`coroutine_traits<Task<T>, A&&, Args...>::promise_type:typ`等，具体取决于`const:kwd`、`&`和`&&`限定符。因此可以通过特化`coroutine_traits<T, Args...>:typ`泛型类以将现有类型作为协程承诺对象。
+
+```cpp [main.cpp]
+/* 特化 coroutine_traits 类，把 future 作为
+ 满足协程特征的类型 */
+template <typename T, typename... Args>
+class std::coroutine_traits<std::future<T>, Args...> {
+    public:
+
+        /* 协程承诺类，将继承自 promise */
+        class promise_type; // [!code highlight]
+};
+
+/* 实现协程承诺类（嵌套类） */
+template <typename T, typename... Args>
+class std::coroutine_traits<std::future<T>, Args...>::promise_type // [!code highlight]
+    : public std::promise<T> {
+    public:
+
+        /* 返回一个满足协程特征的实例 */
+        std::future<T> get_return_object() { return this->get_future(); }
+
+        /* 协程初始化时不挂起 */
+        std::suspend_never initial_suspend() { return std::suspend_never(); }
+
+        /* 协程结束时挂起 */
+        std::suspend_always final_suspend() noexcept {
+            return std::suspend_always();
+        }
+
+        /* 允许使用 co_return 关键字返回值 */
+        void return_value(const T &value) { this->set_value(value); }
+        void return_value(T &&value) { this->set_value(std::move(value)); }
+
+        /* 抛出错误时 */
+        void unhandled_exception() {
+            this->set_exception(std::current_exception());
+        }
+};
+
+/* 允许使用 co_await 关键字所必需的类：等待器类 */
+template <typename T>
+class future_awaitable : public std::future<T> {
+    public:
+
+        /* 等待 0s，超时则没准备好 */
+        bool await_ready() {
+            using namespace std::chrono_literals;
+            std::cout << "co_await triggered at thread "
+                      << std::this_thread::get_id() << "\n";
+            return this->wait_for(0s) != std::future_status::timeout;
+        }
+
+        /* 此处确信协程不会被其它线程抢先重启，可以使用 this */
+        void await_suspend(std::coroutine_handle<> handle) { // [!code highlight]
+            std::thread([this, handle]() {
+                this->wait();   // 在其它线程里同步阻塞式等待
+                handle();       // 同步阻塞式等待结束后重启协程
+            }).detach();
+        }
+
+        /* 等价于 */
+        // template <typename U>
+        // void await_suspend(std::coroutine_handle<U> handle)
+
+        T await_resume() { return this->get(); }
+};
+
+/* 运算符重载，将 future 实例转换为等待器实例 */
+template <typename T>
+future_awaitable<T> operator co_await(std::future<T> &&future) {
+    return future_awaitable<T>(std::move(future));
+}
+
+template <typename T, typename... U>
+std::future<T> sum(U... args) {
+    co_return (... + (co_await std::async([&]() {
+                   using namespace std::chrono_literals;
+
+                   /* 睡 1s */
+                   std::this_thread::sleep_for(1s);
+
+                   return args;
+               })));
+}
+
+int main() {
+    auto a = sum<int>(114, 514, 1919, 810);
+    a.wait();
+    std::cout << "a = " << a.get() << "\n";
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+co_await triggered at thread 27704
+co_await triggered at thread 8872
+co_await triggered at thread 6064
+co_await triggered at thread 17328
+a = 3357
+```
+
+需要注意的是，上述代码中没有任何类型继承自`coroutine_handle<T>:typ`类，因此无法在外部通过协程控制器让协程恢复执行，也就无法使用会导致挂起的`co_yield:kwd`关键字。
+
+#### (7) 模块
+
+<Note type="info" title="先进的代价">
+
+g++、clang++ 以及 CMake 对 C++ 模块的支持尚不完全，所以如果项目使用了 C++ 模块，那就只能手写编译命令。建议通过 shell 脚本实现构建系统，下述代码是一个适用于 bash 的 clang++ 编译脚本示例，文件位于项目根目录下。
+
+```bash [build.sh]
+#!bash
+set -x
+cd src # 切换到源代码目录
+
+modules=() # 暂存所有预编译的模块
+
+# 处理模块源文件，假定：
+#   1. 所有源文件都在 src 目录下且不含次级目录
+#   2. 模块之间互相不导入
+#   3. 只有 main.cpp 一口气导入所有模块
+# 简单示例就先这么干
+files=$(ls | grep '.cppm')
+for file in $files; do
+    basename="${file%%.*}"
+    extension="${file##*.}"
+    modules+="$basename.pcm"
+    clang++ -std=c++20 $file --precompile -o $basename.pcm
+done
+
+# 生成可执行文件
+clang++ -std=c++20 -fprebuilt-module-path=. $modules main.cpp -o Hello.exe
+```
+
+```bash [clean.sh]
+#!bash
+set -x
+cd src
+
+# 删除编译文件
+rm *.pcm *.exe
+```
+
+此外，由于无法使用 CMake，因此也无法生成供 clangd 使用的编译命令文件，也就没有静态检查支持。如果真碰到了使用 C++ 模块的项目，建议老老实实使用 Visual Studio 和 MSVC。
+
+</Note>
+
+clang++ 要求声明为模块的源文件后缀名应为`.cppm`或其它符合其规定的后缀名。一个简单的模块使用样例如下：
+
+```cpp [main.cpp]
+import hello;   // 导入模块 // [!code highlight]
+
+int main() {
+    greeting();
+    return 0;
+}
+```
+
+```cpp [hello.cppm]
+module;                 // 全局模块片段开始 // [!code highlight]
+
+/* 兼容头文件导入，且头文件必须在全局模块片段内被导入，
+ 被导入的所有标识符将附着于全局模块 */
+#include <iostream>
+
+export module hello;    // 声明此文件的模块名，模块片段开始 // [!code highlight]
+
+/* 导出此函数，此函数附着于模块 hello */
+export void greeting();
+
+module :private;        // 模块私有片段开始 // [!code highlight]
+
+void greeting() { std::cout << "Hello, world!\n"; }
+```
+
+`import:kwd`关键字之前允许添加`export:kwd`关键字，以将导入的模块再次导出。此外，模块和命名空间完全互相独立，且模块可以分区。
+
+```cpp [main.cpp]
+import hello;
+
+int main() {
+    /* 模块 hello 中的函数 */
+    g();
+    return 0;
+}
+```
+
+```cpp [hello.cppm]
+module;
+
+export module hello;
+
+/* 导入分区 hello:greeting，但不导出 */
+import :greeting; // [!code highlight]
+
+/* 导入分区 hello:info，但不导出 */
+import :info; // [!code highlight]
+
+export void g();
+
+module :private;
+
+void g() {
+    using namespace hello;
+
+    /* 分区 hello:greeting 中的函数 */
+    greeting();
+
+    /* 分区 hello:greeting 中的函数 */
+    info();
+}
+```
+
+```cpp [hello-greeting.cpp]
+module;
+
+#include <iostream>
+
+export module hello:greeting; // [!code highlight]
+
+namespace hello {
+    export void greeting() { std::cout << "Hello, world!\n"; }
+};  // namespace hello
+```
+
+```cpp [hello-info.cpp]
+module;
+
+#include <iostream>
+
+export module hello:info; // [!code highlight]
+
+namespace hello {
+
+    /* 输出 clang 编译器的版本 */
+    export void info() { std::cout << __clang_version__ "\n"; }
+};  // namespace hello
+```
+
+模块具有“所有权”，即在该模块下声明的标识符必须在该模块下实现（在模块分区内实现也不行）。
+
+#### (8) 概念与约束
+
+~~终于等来泛型约束力！~~ 现在，可以使用两种方法对泛型参数进行限定：概念与约束。概念和约束都将在编译时求值。使用概念与约束必须引入头文件`<concepts>`。
+
+```cpp [main.cpp]
+// [!code word:concept]
+// [!code word:requires]
+/* 概念：可以做加法的类型 */
+template <typename B, typename A>
+concept Addable = requires(A a, B b) {
+    /* 要求 1：类型 B 可转换为类型 A */
+    std::convertible_to<B, A>;
+
+    /*
+     * 要求 2：
+     *  1. 表达式 a + b 合法
+     *  2. 表达式 a + b 求值后的类型可转换为类型 A
+     */
+    { a + b } -> std::convertible_to<A>;
+};
+
+/* 使用概念限定泛型参数：形参包 U 内所有类型必须满足 Addable<U, T> */
+template <typename T, Addable<T>... U>
+T sum(U... args) {
+    return (... + args);
+}
+
+int main() {
+    std::cout << sum<double>(114, 514, 19.19, 810) << "\n";
+    std::cout << sum<std::string>(std::string("114"), "514", "1919", "810")
+              << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello.exe
+1457.19
+1145141919810
+```
+
+概念不能被显式实例化、特化，不能递归，不能受约束。在`template:kwd`语句中，概念的第一个泛型参数会被自动推导。在上述代码中，`convertible_to<T, U>:typ`也是一个概念。也可以使用类型特征（`<type_traits>`头文件）创建概念：
+
+```cpp
+/* 概念：可转换 */
+template <typename U, typename T>
+concept Convertible =
+    /* 可从 U 转换至 T */
+    std::is_convertible_v<U, T> ||
+
+    /* 可从 const U& 构造 T */
+    std::is_constructible_v<T, std::add_lvalue_reference_t<const U>> ||
+
+    /* 可从 U&& 构造 T */
+    std::is_constructible_v<T, std::add_rvalue_reference_t<U>>;
+```
+
+约束可以直接作为概念的主体，并进行合取（并集、逻辑或）和析取（交集、逻辑与）操作。析取遵循短路运算原则。
+
+```cpp
+/* 合取：必须全部满足 */
+template <typename U, typename T, typename... Args>
+concept DerivedFunction =
+    std::is_base_of_v<T, U> && std::is_invocable_v<U, Args...>;
+
+/* 析取：满足下列之一即可 */
+template <typename U, typename T>
+concept Convertible =
+    std::is_convertible_v<U, T> ||
+    std::is_constructible_v<T, std::add_lvalue_reference_t<const U>> ||
+    std::is_constructible_v<T, std::add_rvalue_reference_t<U>>;
+```
+
+约束也可以搭配`requires:kwd`关键字，在泛型形参列表之后使用。
+
+```cpp
+template <typename B, typename A>
+concept Addable = requires(A a, B b) {
+    std::convertible_to<B, A>;
+    { a + b } -> std::convertible_to<A>;
+};
+
+// [!code word:requires]
+/* 返回类型必须是数值类型的泛型函数 */
+template <typename T, Addable<T>... U>
+    requires std::integral<T> || std::floating_point<T>
+T sum(U... args) {
+    return (... + args);
+}
+```
+
+在特化泛型时可以指定不同的概念与约束，编译器会优先选择符合条件且“最受约束”的特化。但最好不要让约束之间互相冲突，因为这极有可能导致未定义行为。
+
+#### (9) 泛型函数简写
+
+现在有以下等价写法：
+
+```cpp
+/* 简写的泛型函数 */
+auto sum(auto a, auto b) { return a + b; }
+
+/* 等价于 */
+// template <typename T, typename U, typename V>
+// T sum(U a, V b) {
+//     return a + b;
+// }
+
+
+/* 带约束的简写泛型函数 */
+std::integral auto sum(std::integral auto a, std::integral auto b) {
+    return a + b;
+}
+
+/* 等价于 */
+// template <std::integral T, std::integral U, std::integral V>
+// T sum(U a, V b) {
+//     return a + b;
+// }
+```
+
+简写的泛型函数也可以被特化。
+
+### 2. 库功能特性
+
+#### (1) 格式化字符串改进
+
+`<format>`头文件提供的`format<Args...>():fun`函数可以实现带格式的插值字符串。
+
+```cpp [main.cpp]
+auto now = std::chrono::system_clock::now().time_since_epoch();
+std::string formatted = std::format("current time is {}", now);
+std::cout << "formatted = " << formatted << "\n";
+
+formatted =
+    std::format(std::locale("zh_CN"), "current time is {:%H:%M:%S}", now);
+std::cout << "formatted = " << formatted << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+formatted = current time is 1745290007836256µs
+formatted = current time is 02:46:47.836256
+```
+
+`format<Args...>():fun`函数的第一个实参可以是一个`locale:typ`的对象，用于设置该字符串插值应采取的地区格式 ~~虽然不支持 UTC 时间转东八区时间~~ 。在格式化字符串内，`"{}":str`代表了后续参数应当被插入的位置，且其内部允许使用由`formatter<T>:typ`类决定的格式化参数。
+
+`format<Args...>():fun`函数在处理传入的参数时会使用`formatter<T>:typ`类，如果参数类型没有对应的`formatter<T>:typ`泛型类特化将会引发编译时报错，否则调用实例的`parse():fun`成员函数以解析格式化参数，再调用`format():fun`成员函数以输出为字符串。
+
+```cpp [main.cpp]
+/* 概念：可以被格式化的类型 */
+template <typename T>
+concept Formattable = requires(T a) {
+    /* 允许使用 to_string() 转换为 string 类型 */
+    { std::to_string(a) } -> std::same_as<std::string>;
+};
+
+/* formatter 特化：允许格式化 vector */
+template <Formattable T>
+class std::formatter<std::vector<T>> {
+    private:
+
+        /* 括号类型：大括号，中括号，小括号 */
+        enum class BracketType { CurlyBracket, SquareBracket, RoundBracket };
+
+        BracketType bracket;
+
+    public:
+        constexpr formatter() : bracket(BracketType::SquareBracket) {}
+
+        /* 自定义格式化参数（编译时执行） */
+        constexpr std::format_parse_context::iterator parse( // [!code highlight]
+            std::format_parse_context &context) { // [!code highlight]
+            auto iter = context.begin();
+            if (iter == context.end()) return iter;
+
+            if (*iter == 'b') {
+                bracket = BracketType::RoundBracket;
+                iter++;
+            } else if (*iter == 'B') {
+                bracket = BracketType::CurlyBracket;
+                iter++;
+            }
+
+            if (iter != context.end() && *iter != '}')
+                throw std::format_error("invalid vector<T> format params");
+
+            return iter;
+        }
+
+        /* 格式化输出（运行时执行） */
+        std::format_context::iterator format( // [!code highlight]
+            const std::vector<T> &vec, std::format_context &context) const { // [!code highlight]
+            std::ostringstream output; // 输出至 string 的输出流
+            char leftWrapper = '[';
+            char rightWrapper = ']';
+            switch (this->bracket) {
+                case BracketType::CurlyBracket: {
+                    leftWrapper = '{';
+                    rightWrapper = '}';
+                    break;
+                }
+                case BracketType::SquareBracket: {
+                    leftWrapper = '[';
+                    rightWrapper = ']';
+                    break;
+                }
+                case BracketType::RoundBracket: {
+                    leftWrapper = '(';
+                    rightWrapper = ')';
+                    break;
+                }
+            }
+
+            output << leftWrapper;
+            for (int i = 0; i < vec.size(); i++) {
+                output << std::to_string(vec[i]);
+                if (i != vec.size() - 1) output << ", ";
+            }
+            output << rightWrapper;
+
+            /* 输出 */
+            return std::format_to(context.out(), "{}", output.str()); // [!code highlight]
+        }
+};
+
+int main() {
+    std::vector<int> vec{114, 514, 1919, 810};
+
+    std::cout << std::format("vec = {}", vec) << "\n";
+    std::cout << std::format("vec = {:b}", vec) << "\n";
+    std::cout << std::format("vec = {:B}", vec) << "\n";
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+vec = [114, 514, 1919, 810]
+vec = (114, 514, 1919, 810)
+vec = {114, 514, 1919, 810}
+```
+
+在上述代码中，`format_to<T, Args...>():fun`函数是`format<Args...>():fun`函数的一个变种，前者将输出至输出迭代器（第一个实参）并返回新输出迭代器。
+
+#### (2) 范围
+
+> 范围库是对迭代器和泛型算法库的一个扩展，使得迭代器和算法可以通过组合变得更强大，并且减少错误。范围库创造并操作范围视图，它们是间接表示可遍历的序列（范围）的轻量对象。
+
+范围库最主要的两个相关头文件是`<ranges>`和`<iterator>`，所有接受头尾迭代器（`begin():fun`和`end():fun`）的算法（`<algorithm>`）都有接受范围的重载。范围是一个概念（`concept:kwd`），指代所有含有头尾迭代器的类型。即：下述函数几乎均可用于标准库提供的含头尾迭代器的容器。
+
+```cpp [main.cpp]
+/* 创建范围：1 ~ 100 的整数*/
+const auto elements = std::views::iota(1, 100);
+
+/* “管道”操作：取 3 的倍数、取前 5 个数、逆序 */
+auto filteredElements =
+    elements | std::views::filter([](int v) { return v % 3 == 0; }) |
+    std::views::take(5) | std::views::reverse;
+
+for (const auto &i : filteredElements) {
+    std::cout << i << " ";
+}
+std::cout << "\n";
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+15 12 9 6 3
+```
+
+在上述代码中，`|`（按位与）运算符被重载为了类似于 bash 的管道操作符。`|`运算符产出的对象是懒执行的，只有在需要取元素时才会真正进行通过“管道”定义的操作。
+
+关于范围相关的函数请查阅 CPP Reference 的[范围库](https://zh.cppreference.com/w/cpp/ranges "点击跳转")，此处仅做名词说明：
+
+- 范围访问函数：用于访问标准容器的函数，如头尾迭代器、大小等。
+- 范围概念：用于泛型参数限定
+- 范围工厂：用于产出范围实例
+- 范围适配器：用于操作范围，如上述代码的`filter():fun`函数
+
+#### (3) 多线程改进
+
+现在，多线程库添加了线程屏障（`<barrier>`和`<latch>`）、信号量（`<semaphore>`）、线程取消（`<stop_token>`）和`jthread:typ`类，并且`atomic<T>:typ`泛型类为`shared_ptr<T>:typ`类添加了特化，允许对引用计数指针的原子读写。
+
+`barrier<F>:typ`泛型类可以阻塞数量已知的若干线程，直到这些线程均已被此屏障阻塞。该线程屏障可重用。
+
+```cpp [main.cpp]
+auto nums = std::views::iota(1, 9);
+std::barrier barrier(10, []() { std::cout << "\nlock off\n"; }); // [!code highlight]
+
+std::vector<std::thread> threads;
+
+for (int i = 0; i < 10; i++) {
+    threads.push_back(std::thread([&]() {
+        for (const int &num : nums) {
+            barrier.arrive_and_wait(); // [!code highlight]
+            std::cout << num;
+        }
+        barrier.arrive_and_wait(); // [!code highlight]
+    }));
+}
+
+using namespace std::chrono_literals;
+std::this_thread::sleep_for(2s);
+
+for (auto &thread : threads) {
+    thread.join();
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+
+lock off
+1111111111
+lock off
+2222222222
+lock off
+3333333333
+lock off
+4444444444
+lock off
+5555555555
+lock off
+6666666666
+lock off
+7777777777
+lock off
+8888888888
+lock off
+```
+
+`barrier<F>:typ`类的成员函数如下：
+
+|         函数名          |                             作用                              |
+| :---------------------: | :-----------------------------------------------------------: |
+|     `arrive():fun`      |                 指示屏障此线程已抵达，不阻塞                  |
+|      `wait():fun`       |                         阻塞等待屏障                          |
+| `arrive_and_wait():fun` |                等价于调用`wait(arrive()):fun`                 |
+| `arrive_and_drop():fun` | 类似于`arrive_and_wait():fun`，但使触发“放行”所需的计数永久-1 |
+
+`barrier<F>:typ`类的原理是计数。当调用`arrive():fun`成员函数的次数等于给定数值（构造函数的第一实参）时，“放行”所有阻塞线程。每次“放行”后重新开始计数。
+
+`latch:typ`类也是线程屏障，但不可重用。其成员函数如下：
+
+|         函数名          |            作用            |
+| :---------------------: | :------------------------: |
+|   `count_down():fun`    |      减少计数但不阻塞      |
+|    `try_wait():fun`     |    测试计数是否减少至 0    |
+|      `wait():fun`       |      阻塞等待计数为 0      |
+| `arrive_and_wait():fun` | 减少计数并阻塞等待计数为 0 |
+
+`<semaphore>`头文件下定义了两种信号量：`counting_semaphore<S>:typ`（计数信号量）和`binary_semaphore:typ`（01 信号量）。实际上，`binary_semaphore:typ`是`counting_semaphore<1>:typ`的别名。`counting_semaphore<S>:typ`的成员函数如下：
+
+|          函数名           |                作用                 |
+| :-----------------------: | :---------------------------------: |
+|      `acquire():fun`      | 减少计数，若计数为 0 则同步阻塞等待 |
+|      `release():fun`      |              增加计数               |
+|    `try_acquire():fun`    |        尝试减少计数，不阻塞         |
+|  `try_acquire_for():fun`  |        尝试减少计数一段时间         |
+| `try_acquire_until():fun` |      尝试减少计数至指定时间戳       |
+
+`jthread:typ`类与`thread:typ`类相似，区别在于前者可以在对象析构时自动`join():fun`且允许线程取消。
+
+```cpp [main.cpp]
+std::vector<std::jthread> threads;
+std::vector<std::stop_source> sources; // [!code highlight]
+std::random_device random;
+std::mutex ioMutex;
+
+for (int i = 0; i < 9; i++) {
+    sources.push_back(std::stop_source()); // [!code highlight]
+    threads.push_back(std::jthread(
+        [&, i](const std::stop_token &token) {
+            while (true) {
+                if (token.stop_requested()) {
+                    ioMutex.lock();
+                    std::cout << "thread " << i << " break\n";
+                    ioMutex.unlock();
+                    break;
+                }
+            }
+        },
+        sources[i].get_token()));
+}
+
+for (int i = 0; i < 9; i++) {
+    int j = random() % 9;
+    while (sources[j].stop_requested()) {
+        j = random() % 9;
+    }
+    sources[j].request_stop();
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+thread 0 break
+thread 6 break
+thread 1 break
+thread 2 break
+thread 5 break
+thread 3 break
+thread 4 break
+thread 8 break
+thread 7 break
+```
+
+实际上，一个`stop_source:typ`实例通过`get_token():fun`成员函数返回的`stop_token:typ`实例可以应用至多个线程。当调用`stop_source:typ`实例的`request_stop():fun`成员函数时，所有对应的线程都会“收到消息”。`stop_token:typ`可以与`condition_variable_any:typ`搭配使用，以在等待信号量时中止线程。
+
+```cpp
+std::stop_source source;
+std::mutex ioMutex;
+std::condition_variable_any condition;
+
+bool flag = false;
+
+std::jthread thread(
+    [&](const std::stop_token &token) {
+        std::unique_lock lock(ioMutex);
+
+        /* 多了一个参数 token */
+        condition.wait(lock, token, [&]() { return flag; }); // [!code highlight]
+
+        /* 唤醒有两种可能：被请求结束了，或条件变量“满足”了 */
+        if (token.stop_requested()) {
+            std::cout << "thread: stop requested\n";
+        } else {
+            std::cout << "woken up by cv, but this should never be shown\n";
+        }
+    },
+    source.get_token());
+
+/* 向指定 token 注册回调函数 ，超出作用域即无效 */
+std::stop_callback callback(source.get_token(), []() {
+    std::cout << "callback: stop requested\n";
+});
+
+source.request_stop();
+
+thread.join();
+```
+
+#### (4) 杂项
+
+|      头文件名       |                           功能                           |
+| :-----------------: | :------------------------------------------------------: |
+|       `<bit>`       |                         比特操作                         |
+|     `<numbers>`     |                         数学常数                         |
+| `<source_location>` |               源代码信息（文件名、行号等）               |
+|      `<span>`       | 连续序列容器（无所有权），一般用于函数形参，替代数组指针 |
+|   `<syncstream>`    |                    同步标准输出包装器                    |

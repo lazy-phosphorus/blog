@@ -1,0 +1,2021 @@
+import { Note } from "@/components/note";
+
+## 零、工程目录参考
+
+```cpp [./src/main.cpp]
+#include <iostream>
+
+int main() {
+    std::cout << "Hello, world!\n";
+    return 0;
+}
+```
+
+```cmake [./CMakeLists.txt]
+cmake_minimum_required(VERSION 3.30)
+
+project(Hello LANGUAGES CXX)
+
+file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+```
+
+```jsonc [./CMakePresets.json]
+{
+    "version": 9,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 30,
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build",
+            "generator": "MinGW Makefiles",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "17",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "on",
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/bin",
+            },
+        },
+        {
+            "name": "dbg",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+            },
+        },
+        {
+            "name": "rel",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+            },
+        },
+    ],
+}
+```
+
+如无特殊说明，命令行工作路径默认在工程目录的`./build`目录下。
+
+## 一、面向对象设计原则
+
+1. 开闭原则：对扩展开放，对修改关闭（允许从基类派生子类，通过派生来扩展基类功能，但不允许对基类进行修改）。
+2. 里氏代换原则：子类可以替换基类且功能不受影响（子类可以胜任基类的功能，且不能破坏基类原有功能）。
+3. 依赖反转原则：面向接口编程，依赖于抽象而非具体（例：将象棋棋子视为一种实例，每个棋子实例都含有移动方法。在实现走棋逻辑时，不应直接从棋子实例调用方法，而应从“实现了棋子移动接口的实例”调用方法）。
+4. 接口隔离原则：使用多个隔离的接口代替单个接口（在 RTS 游戏中，有些单位可以攻击也可以驻防，应为攻击与驻防单独实现接口）。
+5. 最小知识原则：实体应当尽量少地与其它实体相互作用，系统功能模块应相对独立。
+6. 合成复用原则：尽量使用接口而非继承。
+
+~~原则并非不能被打破~~
+
+## 二、创建型模式
+
+创建型模式在创建实例的同时隐藏创建逻辑，即调用者不需要使用`new:kwd`运算符或`malloc():fun`函数，也不需要知道实例应该如何初始化。
+
+### 1. 工厂模式
+
+工厂模式常用于一个抽象类拥有多个非抽象派生类，且调用者只需要调用抽象类的成员变量/成员方法时。
+
+假设，现在需要编写一个象棋游戏。每个棋子的移动规则各不相同，但都可以移动，这种情况可以使用工厂模式来创建棋子实例。
+
+#### (1) 简单工厂模式
+
+简单工厂模式下，各个子类实例的生成由一个单独的工厂类型负责（当然也可以写成静态成员方法或者纯粹的函数）。
+
+```cpp [piece.hpp]
+#ifndef __PIECE_HPP__
+#define __PIECE_HPP__
+
+#include <memory>
+
+/* 棋子接口，棋子可以移动 */
+class IPiece {
+    public:
+        IPiece();
+        virtual ~IPiece(); // [!code highlight]
+        virtual void Move() = 0;
+};
+
+/* 棋子类型 */
+enum __PieceType {
+    PIECE_ROOK,
+    PIECE_KNIGHT,
+    PIECE_BISHOP,
+};
+using PieceType = __PieceType;
+
+/* 工厂类 */
+class PieceFactory {
+    private:
+        PieceFactory() = delete;
+        ~PieceFactory() = delete;
+
+    public:
+        static std::unique_ptr<IPiece> Create(PieceType type);
+};
+
+#endif  // __PIECE_HPP__
+```
+
+```cpp [piece.cpp]
+#include "piece.hpp"
+
+#include <iostream>
+#include <memory>
+
+IPiece::IPiece() { std::cout << "IPiece instance constructed.\n"; }
+
+IPiece::~IPiece() { std::cout << "IPiece instance destructed.\n"; }
+
+class Rook : public IPiece {
+    public:
+        void Move() override { std::cout << "Rook moved.\n"; }
+};
+
+class Knight : public IPiece {
+    public:
+        void Move() override { std::cout << "Knight moved.\n"; }
+};
+
+class Bishop : public IPiece {
+    public:
+        void Move() override { std::cout << "Bishop moved.\n"; }
+};
+
+/* 根据参数类型创建实例（使用智能指针） */
+std::unique_ptr<IPiece> PieceFactory::Create(PieceType type) {
+    switch (type) {
+        case PIECE_ROOK:
+            return std::unique_ptr<IPiece>(new Rook());
+        case PIECE_KNIGHT:
+            return std::unique_ptr<IPiece>(new Knight());
+        case PIECE_BISHOP:
+            return std::unique_ptr<IPiece>(new Bishop());
+    }
+}
+```
+
+```cpp [main.cpp]
+#include <memory>
+
+#include "piece.hpp"
+
+int main() {
+    std::unique_ptr<IPiece> rook = PieceFactory::Create(PIECE_ROOK);
+    std::unique_ptr<IPiece> knight = PieceFactory::Create(PIECE_KNIGHT);
+    std::unique_ptr<IPiece> bishop = PieceFactory::Create(PIECE_BISHOP);
+
+    rook->Move();
+    knight->Move();
+    bishop->Move();
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+IPiece instance constructed.
+IPiece instance constructed.
+IPiece instance constructed.
+Rook moved.
+Knight moved.
+Bishop moved.
+IPiece instance destructed.
+IPiece instance destructed.
+IPiece instance destructed.
+```
+
+#### (2) 工厂方法模式
+
+上一小节的代码仅实现了三个棋子类型，现需添加更多类型的棋子——这意味着需要修改`PieceFactory:typ`类，**违反了开闭原则**。在工厂方法模式下，工厂类是一个抽象类，创建实例由工厂类的非抽象子类负责。
+
+```cpp [piece.hpp]
+/* 抽象基类，棋子工厂 */
+class PieceFactory {
+      private: // [!code --]
+        PieceFactory() = delete; // [!code --]
+        ~PieceFactory() = delete; // [!code --]
+
+    public:
+        static std::unique_ptr<IPiece> Create(PieceType type); // [!code --]
+
+        PieceFactory(); // [!code ++]
+        virtual ~PieceFactory(); // [!code ++]
+        virtual std::unique_ptr<IPiece> Create() = 0; // [!code ++]
+};
+
+/* 派生类：炮的工厂 */
+class CannonPieceFactory : public PieceFactory { // [!code ++]
+    public: // [!code ++]
+        CannonPieceFactory(); // [!code ++]
+        ~CannonPieceFactory(); // [!code ++]
+        std::unique_ptr<IPiece> Create() override; // [!code ++]
+}; // [!code ++]
+```
+
+```cpp [piece.cpp]
+class Cannon : public IPiece {
+    public:
+        void Move() override { std::cout << "Cannon moved.\n"; }
+};
+
+std::unique_ptr<IPiece> CannonPieceFactory::Create() {
+    return std::unique_ptr<IPiece>(new Cannon());
+}
+```
+
+```cpp [main.cpp]
+PieceFactory *cannonFactory = new CannonPieceFactory();
+std::unique_ptr<IPiece> cannon = cannonFactory->Create();
+
+cannon->Move();
+
+delete cannonFactory;
+```
+
+使用工厂方法模式，可以随意添加新的棋子种类，只需实现一个继承自`PieceFactory:typ`类的非抽象类和棋子类本身。
+
+#### (3) 抽象工厂模式
+
+抽象工厂模式下，工厂产出简单工厂，简单工厂生成产品。上述代码仅仅实现了棋子的行棋逻辑，还缺少棋子的材质。虽然可以将材质绑定在行棋逻辑类里作为成员变量，但这么做难以实现一键切换材质的功能。
+
+```cpp [piece.hpp]
+/* 行棋逻辑接口 */
+class IPiece {
+    public:
+        IPiece();
+        virtual ~IPiece();
+        virtual void Move() = 0;
+};
+
+/* 棋子材质接口 */
+class ITexture {
+    public:
+        ITexture();
+        virtual ~ITexture();
+        virtual void Render() = 0;
+};
+
+/* 棋子类型 */
+enum __PieceType { PIECE_TYPE_PAWN };
+using PieceType = __PieceType;
+
+/* 材质类型 */
+enum __PieceTextureType { PIECE_Texture_WOODEN };
+using PieceTextureType = __PieceTextureType;
+
+/* 工厂类的工厂类，抽象类，真正的工厂须派生自此类 */
+class PieceFactory {
+    public:
+        PieceFactory();
+        virtual ~PieceFactory();
+        virtual std::unique_ptr<IPiece> CreatePiece(PieceType type) = 0;
+        virtual std::unique_ptr<ITexture> CreateTexture(
+            PieceTextureType type) = 0;
+};
+
+/* 行棋逻辑工厂类 */
+class PieceLogicFactory : public PieceFactory {
+    public:
+        PieceLogicFactory();
+        ~PieceLogicFactory();
+        std::unique_ptr<IPiece> CreatePiece(PieceType type) override;
+        std::unique_ptr<ITexture> CreateTexture(PieceTextureType type) override; // 直接返回 nullptr // [!code highlight]
+};
+
+/* 材质工厂类 */
+class PieceTextureFactory : public PieceFactory {
+    public:
+        PieceTextureFactory();
+        ~PieceTextureFactory();
+
+        std::unique_ptr<IPiece> CreatePiece(PieceType type) override; // 直接返回 nullptr // [!code highlight]
+        std::unique_ptr<ITexture> CreateTexture(PieceTextureType type) override;
+};
+```
+
+```cpp [piece.cpp]
+/* 兵/卒 类 */
+class Pawn : public IPiece {
+    public:
+        void Move() override { std::cout << "Cannon moved.\n"; }
+};
+
+/* 纯木材质 */
+class Wooden : public ITexture {
+    public:
+        void Render() override { std::cout << "Wooden Texture rendered.\n"; }
+};
+
+/* 行棋逻辑工厂，创建行棋逻辑实例 */
+std::unique_ptr<IPiece> PieceLogicFactory::CreatePiece(PieceType type) {
+    switch (type) {
+        case PIECE_TYPE_PAWN:
+            return std::unique_ptr<IPiece>(new Pawn());
+    }
+}
+
+/* 行棋逻辑工厂不处理材质 */
+std::unique_ptr<ITexture> PieceLogicFactory::CreateTexture(
+    PieceTextureType type) {
+    return nullptr;
+}
+
+/* 材质工厂不处理行棋逻辑 */
+std::unique_ptr<IPiece> PieceTextureFactory::CreatePiece(PieceType type) {
+    return nullptr;
+}
+
+/* 材质工厂，创建材质实例 */
+std::unique_ptr<ITexture> PieceTextureFactory::CreateTexture(
+    PieceTextureType type) {
+    switch (type) {
+        case PIECE_Texture_WOODEN:
+            return std::unique_ptr<ITexture>(new Wooden());
+    }
+}
+```
+
+### 2. 单例模式
+
+单例模式下，一个类有且只能有一个实例，该类本身负责创建与初始化该实例并对外提供该实例。
+
+现在有了行棋逻辑和材质，还需要一个棋盘。很显然棋盘实例有且只能有一个。
+
+```cpp [board.hpp]
+class Board {
+    private:
+        /* 引用计数的智能指针 */
+        static std::shared_ptr<Board> instance;
+
+        Board();
+        Board(Board &&) = delete;
+        Board(const Board &) = delete;
+        Board &operator=(const Board &) = delete;
+        Board &operator=(Board &&) = delete;
+
+    public:
+        ~Board();
+        void Initialize();
+
+        static std::shared_ptr<Board> Instance();
+};
+```
+
+```cpp [board.cpp]
+std::shared_ptr<Board> Board::instance = nullptr;
+
+Board::Board() { std::cout << "Board constructed.\n"; }
+Board::~Board() { std::cout << "Board destructed.\n"; }
+
+std::shared_ptr<Board> Board::Instance() {
+
+    /* 注意，若需保证线程安全，则必须加锁 */
+    if (Board::instance == nullptr)
+        Board::instance = std::unique_ptr<Board>(new Board());
+
+    return Board::instance;
+}
+
+void Board::Initialize() { std::cout << "Board initialized.\n"; }
+```
+
+根据唯一实例创建的时机，单例模式又可以分为饥饿式（使用前就初始化）和懒式（第一次调用时才初始化）。在多线程环境下，饥饿式不需要加锁；懒式一般会使用双锁机制或静态局部变量。
+
+<Note type="info" title="双锁机制">
+
+在返回唯一实例之前，首先检测唯一实例是否为`nullptr:kwd`，如果是则获取锁，获取锁后再检测唯一实例是否为`nullptr:kwd`，如果仍然是则初始化实例。
+
+```cpp
+if (Board::instance == nullptr) {
+    Board::lock.lock(); // 静态成员变量，类型为 std::mutex
+
+    if (Board::instance == nullptr)
+        Board::instance = std::unique_ptr<Board>(new Board());
+
+    Board::lock.unlock();
+}
+
+return Board::instance;
+```
+
+</Note>
+
+### 3. 建造者模式
+
+建造者模式适用于创建实例是一个相对复杂的过程时（例如有若干参数和处理流程）。
+
+棋类游戏里，棋手可以允许对方悔棋，且会有行棋记录并可以导出棋谱。如果将棋谱视为实例，那么创建棋谱的过程最好使用建造者模式。
+
+```cpp [record.hpp]
+/* 棋谱类 */
+class Record {
+    private:
+        std::string steps;
+        Record() = delete;
+        Record(const char *steps, std::size_t length);
+        friend class RecordBuilder;
+
+    public:
+        ~Record();
+
+        void Print();
+};
+
+/* 棋谱构建类 */
+class RecordBuilder {
+    private:
+        char *cache;
+        std::size_t length;
+        std::size_t capacity;
+
+    public:
+        RecordBuilder();
+        ~RecordBuilder();
+
+        Record Build();
+        void AddStep(const char *step);
+        void RemoveLastStep();
+};
+```
+
+```cpp [record.cpp]
+Record::Record(const char *steps, std::size_t length) : steps(steps, length) {}
+Record::~Record() {}
+
+void Record::Print() { std::cout << this->steps << "\n"; }
+
+RecordBuilder::RecordBuilder() {
+    this->capacity = 256;
+    this->length = 0;
+    this->cache = new char[this->capacity]();
+}
+RecordBuilder::~RecordBuilder() { delete[] this->cache; }
+
+void RecordBuilder::AddStep(const char *step) {
+    std::size_t len = std::strlen(step);
+    if (this->length + len + 1 > this->capacity) {
+        /* 容量不够时扩容 */
+        this->capacity *= 2;
+        char *temp = new char[this->capacity]();
+        std::memcpy(temp, this->cache, this->length);
+        delete[] this->cache;
+        this->cache = temp;
+    }
+    if (this->length != 0) {
+        this->cache[this->length] = '\n';
+        this->length++;
+    }
+    std::memcpy(this->cache + this->length, step, len);
+    this->length += len;
+}
+
+void RecordBuilder::RemoveLastStep() {
+    std::size_t i = this->length - 1;
+    for (; i > 0; i--) {
+        if (this->cache[i] == '\n') {
+            break;
+        }
+    }
+    this->length = i;
+}
+
+Record RecordBuilder::Build() {
+    return Record(this->cache, this->length);
+}
+```
+
+上述代码其实就是一个非常简陋的`StringBuilder:typ`。建造者模式还常见于构建 HTTP 请求/响应报文时。
+
+### 4. 原型模式
+
+原型模式，其实就是一种“缓存” ~~Redis 并感~~ 。当需要重复创建实例，且直接创建实例的开销很大，而深拷贝的开销很小时适用原型模式。
+
+如果玩家想导入棋谱做复盘，而解析棋谱的开销很大，玩家又有可能重复导入同一盘棋的棋谱，则此时可以用`unordered_map<K, V>:typ`类型的实例缓存最近几次的解析结果。
+
+```cpp [resolver.hpp]
+/* 棋谱解析类 */
+class Resolver {
+    private:
+        std::string data;
+
+        /* 缓存 */
+        static std::unordered_map<std::string, std::string> cache;
+
+        Resolver() = delete;
+
+    public:
+        Resolver(std::string &steps);
+        ~Resolver();
+};
+```
+
+```cpp [resolver.cpp]
+std::unordered_map<std::string, std::string> Resolver::cache;
+
+Resolver::~Resolver() {}
+
+Resolver::Resolver(std::string &steps) {
+    auto p = Resolver::cache.find(steps);
+    if (p != Resolver::cache.end()) {
+        /* 如果已有缓存，则直接返回缓存 */
+        this->data = p->second;
+        return;
+    }
+
+    /* 模拟开销较大的解析过程 */
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+    this->data = std::string("Resolved result");
+    Resolver::cache[steps] = this->data;
+}
+```
+
+## 三、结构型模式
+
+结构型模式用于设计各个不同类型之间的组合关系。
+
+### 1. 适配器模式
+
+现有一个工程项目和一个现有类，该现有类不符合工程项目的接口要求，但又需在该项目中使用此现有类，此时适用适配器模式。实现一个继承项目接口且含有现有类实例作为成员变量的新类，该新类就是适配器类。
+
+现在有一个`Number:typ`类型，该类型代表浮点数，其具体实现代码不可访问，仅能查看类型声明。项目要求所有代表数值的类型都可以与`int:kwd`类型比较大小，但`Number:typ`类型并未实现相应接口。此时可以参考下述代码：
+
+```cpp
+/* 项目接口：要求可以和 int 比大小 */
+class IComparable {
+    public:
+        IComparable();
+        virtual ~IComparable();
+        virtual bool operator>(const int &) const = 0;
+        virtual bool operator<(const int &) const = 0;
+        virtual bool operator<=(const int &) const = 0;
+        virtual bool operator>=(const int &) const = 0;
+        virtual bool operator==(const int &) const = 0;
+};
+
+/* 现有类型：数字类，包含整数部分和小数部分 */
+class Number {
+    private:
+        int integer;
+        int decimal;
+
+        Number() = delete;
+
+    public:
+        Number(int integer, int decimal) = delete;
+        virtual ~Number();
+        int Integer() const;
+        int Decimal() const;
+};
+
+/* 适配器类：实现项目接口，同时含有 Number 类型的成员变量 */
+class NumberAdapter : IComparable {
+    private:
+        Number number; // [!code highlight]
+
+    public:
+        NumberAdapter(int integer, int decimal);
+        ~NumberAdapter();
+        bool operator>(const int &) const override;
+        bool operator<(const int &) const override;
+        bool operator<=(const int &) const override;
+        bool operator>=(const int &) const override;
+        bool operator==(const int &) const override;
+};
+```
+
+此处省略各个类的实现。
+
+### 2. 桥接模式
+
+在桥接模式下，一个对象的不同属性相互分离且可以独立变化。桥接模式一般用于可以从不同角度将若干对象分类时。
+
+现在，新世开发会社想造一批高达。高达从技术路线角度可以划分为吉翁公国技术和地球联邦技术，从作战场景角度可以分为大气圈特化型、空间特化型和泛用型，从交战距离角度可以分为近距型和远距型。如果为每一种可能的高达编写一个非抽象类，则需要$$2 \times 3 \times 2 = 12$$个非抽象类。通过组合而非继承的方式，实际上可以将非抽象类缩减至$$2 + 3 + 2 = 7$$个。
+
+```cpp [tech-route.hpp]
+#ifndef __TECH_ROUTE_HPP__
+#define __TECH_ROUTE_HPP__
+
+#include <string>
+
+/* 技术路线接口 */
+class ITechRoute {
+    public:
+        ITechRoute();
+        virtual ~ITechRoute();
+
+        /* 该方法会在 Gundam 类的成员方法内调用，以确定技术路线 */
+        virtual void UseTechRoute(std::string &project) = 0;
+};
+
+class ZeonTechRoute : public ITechRoute {
+    public:
+        ZeonTechRoute();
+        ~ZeonTechRoute();
+        void UseTechRoute(std::string &project) override;
+};
+
+class EATechRoute : public ITechRoute {
+    public:
+        EATechRoute();
+        ~EATechRoute();
+        void UseTechRoute(std::string &project) override;
+};
+
+#endif  // __TECH_ROUTE_HPP__
+```
+
+```cpp [tech-rotue.cpp]
+#include "tech-route.hpp"
+
+ITechRoute::ITechRoute() {}
+ITechRoute::~ITechRoute() {}
+
+ZeonTechRoute::ZeonTechRoute() {}
+ZeonTechRoute::~ZeonTechRoute() {}
+void ZeonTechRoute::UseTechRoute(std::string &project) {
+    project.append("技术路线：吉翁公国\n");
+}
+
+EATechRoute::EATechRoute() {}
+EATechRoute::~EATechRoute() {}
+void EATechRoute::UseTechRoute(std::string &project) {
+    project.append("技术路线：地球联邦\n");
+}
+```
+
+```cpp [battle-scene.hpp]
+#ifndef __BATTLE_SCENE_HPP__
+#define __BATTLE_SCENE_HPP__
+
+#include <string>
+
+/* 作战场景接口 */
+class IBattleScene {
+    public:
+        IBattleScene();
+        virtual ~IBattleScene();
+
+
+        /* 该方法会在 Gundam 类的成员方法内调用，以确定作战场景 */
+        virtual void UseBattleScene(std::string &project) = 0;
+};
+
+class AtmosphereScene : public IBattleScene {
+    public:
+        AtmosphereScene();
+        ~AtmosphereScene();
+        void UseBattleScene(std::string &project) override;
+};
+
+class SpaceScene : public IBattleScene {
+    public:
+        SpaceScene();
+        ~SpaceScene();
+        void UseBattleScene(std::string &project) override;
+};
+
+class GeneralScene : public IBattleScene {
+    public:
+        GeneralScene();
+        ~GeneralScene();
+        void UseBattleScene(std::string &project) override;
+};
+
+#endif  // __BATTLE_SCENE_HPP__
+```
+
+```cpp [battle-scene.cpp]
+#include "battle-scene.hpp"
+
+IBattleScene::IBattleScene() {}
+IBattleScene::~IBattleScene() {}
+
+AtmosphereScene::AtmosphereScene() {}
+AtmosphereScene::~AtmosphereScene() {}
+void AtmosphereScene::UseBattleScene(std::string &project) {
+    project.append("作战场景：大气圈特化\n");
+}
+
+SpaceScene::SpaceScene() {}
+SpaceScene::~SpaceScene() {}
+void SpaceScene::UseBattleScene(std::string &project) {
+    project.append("作战场景：空间特化\n");
+}
+
+GeneralScene::GeneralScene() {}
+GeneralScene::~GeneralScene() {}
+void GeneralScene::UseBattleScene(std::string &project) {
+    project.append("作战场景：泛用\n");
+}
+```
+
+```cpp [engage-distance.hpp]
+#ifndef __ENGAGE_DISTANCE_HPP__
+#define __ENGAGE_DISTANCE_HPP__
+
+#include <string>
+
+/* 交战距离接口 */
+class IEngageDistance {
+    public:
+        IEngageDistance();
+        virtual ~IEngageDistance();
+
+        /* 该方法会在 Gundam 类的成员方法内调用，以确定交战距离 */
+        virtual void UseEngageDistance(std::string &project) = 0;
+};
+
+class LongDistance : public IEngageDistance {
+    public:
+        LongDistance();
+        ~LongDistance();
+        void UseEngageDistance(std::string &project) override;
+};
+
+class ShortDistance : public IEngageDistance {
+    public:
+        ShortDistance();
+        ~ShortDistance();
+        void UseEngageDistance(std::string &project) override;
+};
+
+#endif  // __ENGAGE_DISTANCE_HPP__
+```
+
+```cpp [engage-distance.cpp]
+#include "engage-distance.hpp"
+
+IEngageDistance::IEngageDistance() {}
+IEngageDistance::~IEngageDistance() {}
+
+LongDistance::LongDistance() {}
+LongDistance::~LongDistance() {}
+void LongDistance::UseEngageDistance(std::string &project) {
+    project.append("交战距离：远\n");
+}
+
+ShortDistance::ShortDistance() {}
+ShortDistance::~ShortDistance() {}
+void ShortDistance::UseEngageDistance(std::string &project) {
+    project.append("交战距离：近\n");
+}
+```
+
+```cpp [shinsei-kaihatsu.hpp]
+#ifndef __SHINSEI_KAIHATSU_TOP_SECRET__
+#define __SHINSEI_KAIHATSU_TOP_SECRET__
+
+#include <memory>
+#include <string>
+
+#include "battle-scene.hpp"
+#include "engage-distance.hpp"
+#include "tech-route.hpp"
+
+/* 高达类 */
+class Gumdam {
+    protected:
+        std::string project;
+
+        /* 采用组合而非继承 */
+        std::unique_ptr<ITechRoute> techRoute;
+        std::unique_ptr<IBattleScene> battleScene;
+        std::unique_ptr<IEngageDistance> engageDistance;
+
+        Gumdam() = delete;
+
+    public:
+        Gumdam(std::unique_ptr<ITechRoute> &&techRoute,
+               std::unique_ptr<IBattleScene> &&battleScene,
+               std::unique_ptr<IEngageDistance> &&engageDistance);
+        ~Gumdam();
+        void Manufacture();
+};
+
+#endif  // __SHINSEI_KAIHATSU_TOP_SECRET__
+```
+
+```cpp [shinsei-kaihatsu.cpp]
+#include "shinsei-kaihatsu.hpp"
+
+#include <iostream>
+
+Gumdam::Gumdam(std::unique_ptr<ITechRoute> &&techRoute,
+               std::unique_ptr<IBattleScene> &&battleScene,
+               std::unique_ptr<IEngageDistance> &&engageDistance)
+    : techRoute(std::move(techRoute)),
+      battleScene(std::move(battleScene)),
+      engageDistance(std::move(engageDistance)) {}
+Gumdam::~Gumdam() {}
+void Gumdam::Manufacture() {
+    this->techRoute->UseTechRoute(this->project);
+    this->battleScene->UseBattleScene(this->project);
+    this->engageDistance->UseEngageDistance(this->project);
+    std::cout << this->project;
+}
+```
+
+```cpp [main.cpp]
+#include "shinsei-kaihatsu.hpp"
+
+int main() {
+    auto tech = std::unique_ptr<ITechRoute>(new EATechRoute());
+    auto scene = std::unique_ptr<IBattleScene>(new AtmosphereScene());
+    auto distance = std::unique_ptr<IEngageDistance>(new LongDistance());
+
+    Gumdam prototype(std::move(tech), std::move(scene), std::move(distance));
+
+    prototype.Manufacture();
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+技术路线：地球联邦
+作战场景：大气圈特化
+交战距离：远
+```
+
+采用桥接模式的好处是，如果将来要增加或细化技术路线、作战场景或交战距离（例如添加提坦斯技术/水下特化/10m 极近距离型），那么只需新添一个实现对应的接口的类即可。
+
+### 3. 过滤器模式
+
+过滤器模式适用于需要用不同的标准（及其组合）来筛选若干实例时。现有若干整数，要筛选其中的奇数、偶数、质数、合数等，还需要组合各种筛选方式，例如：既是偶数又是质数的数、是奇数或者是合数的数。
+
+```cpp [filter.hpp]
+#ifndef __FILTER_HPP__
+#define __FILTER_HPP__
+
+#include <memory>
+#include <vector>
+
+/* 过滤器接口 */
+template <typename T>
+class IFilter {
+    public:
+        IFilter();
+        virtual ~IFilter();
+        virtual std::vector<T> filter(const std::vector<T> &vec) const = 0;
+};
+
+template class IFilter<int>;
+
+/* 奇数过滤器 */
+class OddIntegerFilter : public IFilter<int> {
+    public:
+        OddIntegerFilter();
+        ~OddIntegerFilter() override;
+        std::vector<int> filter(const std::vector<int> &vec) const override;
+};
+
+/* 偶数过滤器 */
+class EvenIntegerFilter : public IFilter<int> {
+    public:
+        EvenIntegerFilter();
+        ~EvenIntegerFilter();
+        std::vector<int> filter(const std::vector<int> &vec) const override;
+};
+
+/* 质数过滤器 */
+class PrimeIntegerFilter : public IFilter<int> {
+    public:
+        PrimeIntegerFilter();
+        ~PrimeIntegerFilter();
+        std::vector<int> filter(const std::vector<int> &vec) const override;
+};
+
+/* 合数过滤器 */
+class CompositeIntegerFilter : public IFilter<int> {
+    public:
+        CompositeIntegerFilter();
+        ~CompositeIntegerFilter();
+        std::vector<int> filter(const std::vector<int> &vec) const override;
+};
+
+/* 与运算过滤器：同时满足两个过滤器条件 */
+template <typename T>
+class AndFilter : public IFilter<T> {
+    private:
+        std::unique_ptr<IFilter<T>> a;
+        std::unique_ptr<IFilter<T>> b;
+
+        AndFilter() = delete;
+
+    public:
+        AndFilter(std::unique_ptr<IFilter<T>> &&a,
+                  std::unique_ptr<IFilter<T>> &&b);
+        ~AndFilter();
+        std::vector<T> filter(const std::vector<T> &vec) const override;
+};
+
+template class AndFilter<int>;
+
+/* 或运算过滤器：满足某一个过滤器条件 */
+template <typename T>
+class OrFilter : public IFilter<T> {
+    private:
+        std::unique_ptr<IFilter<T>> a;
+        std::unique_ptr<IFilter<T>> b;
+
+        OrFilter() = delete;
+
+    public:
+        OrFilter(std::unique_ptr<IFilter<T>> &&a,
+                 std::unique_ptr<IFilter<T>> &&b);
+        ~OrFilter();
+        std::vector<T> filter(const std::vector<T> &vec) const override;
+};
+
+template class OrFilter<int>;
+
+#endif  // __FILTER_HPP__
+```
+
+```cpp [filter.cpp]
+#include "filter.hpp"
+
+template <typename T>
+IFilter<T>::IFilter() {}
+
+template IFilter<int>::IFilter();
+
+template <typename T>
+IFilter<T>::~IFilter() {}
+
+template IFilter<int>::~IFilter();
+
+OddIntegerFilter::OddIntegerFilter() {}
+OddIntegerFilter::~OddIntegerFilter() {}
+std::vector<int> OddIntegerFilter::filter(const std::vector<int> &vec) const {
+    std::vector<int> result;
+
+    for (int i = 0; i < vec.size(); i++) {
+        if (vec[i] % 2 != 0) result.push_back(vec[i]);
+    }
+
+    return result;
+}
+
+EvenIntegerFilter::EvenIntegerFilter() {}
+EvenIntegerFilter::~EvenIntegerFilter() {}
+std::vector<int> EvenIntegerFilter::filter(const std::vector<int> &vec) const {
+    std::vector<int> result;
+
+    for (int i = 0; i < vec.size(); i++) {
+        if (vec[i] % 2 == 0) result.push_back(vec[i]);
+    }
+
+    return result;
+}
+
+PrimeIntegerFilter::PrimeIntegerFilter() {}
+PrimeIntegerFilter::~PrimeIntegerFilter() {}
+std::vector<int> PrimeIntegerFilter::filter(const std::vector<int> &vec) const {
+    std::vector<int> result;
+
+    for (int i = 0; i < vec.size(); i++) {
+        bool flag = false;
+        for (int j = 2; j <= vec[i] / 2; j++) {
+            if (vec[i] % j == 0) {
+                flag = true;
+                break;
+            }
+        }
+        if (!flag && vec[i] >= 2) result.push_back(vec[i]);
+    }
+
+    return result;
+}
+
+CompositeIntegerFilter::CompositeIntegerFilter() {}
+CompositeIntegerFilter::~CompositeIntegerFilter() {}
+std::vector<int> CompositeIntegerFilter::filter(
+    const std::vector<int> &vec) const {
+    std::vector<int> result;
+
+    for (int i = 0; i < vec.size(); i++) {
+        for (int j = 2; j <= vec[i] / 2; j++) {
+            if (vec[i] % j == 0) {
+                result.push_back(vec[i]);
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
+template <typename T>
+AndFilter<T>::AndFilter(std::unique_ptr<IFilter<T>> &&a,
+                        std::unique_ptr<IFilter<T>> &&b)
+    : a(std::move(a)), b(std::move(b)) {}
+template AndFilter<int>::AndFilter(std::unique_ptr<IFilter<int>> &&a,
+                                   std::unique_ptr<IFilter<int>> &&b);
+
+template <typename T>
+AndFilter<T>::~AndFilter() {}
+template AndFilter<int>::~AndFilter();
+
+template <typename T>
+std::vector<T> AndFilter<T>::filter(const std::vector<T> &vec) const {
+    std::vector<T> a_result = this->a->filter(vec);
+    std::vector<T> b_result = this->b->filter(vec);
+    std::vector<T> result;
+
+    for (int i = 0; i < b_result.size(); i++) {
+        auto p = std::find(a_result.begin(), a_result.end(), b_result[i]);
+        if (p != a_result.end()) result.push_back(b_result[i]);
+    }
+
+    return result;
+}
+
+template <typename T>
+OrFilter<T>::OrFilter(std::unique_ptr<IFilter<T>> &&a,
+                      std::unique_ptr<IFilter<T>> &&b)
+    : a(std::move(a)), b(std::move(b)) {}
+template OrFilter<int>::OrFilter(std::unique_ptr<IFilter<int>> &&a,
+                                 std::unique_ptr<IFilter<int>> &&b);
+
+template <typename T>
+OrFilter<T>::~OrFilter() {}
+template OrFilter<int>::~OrFilter();
+
+template <typename T>
+std::vector<T> OrFilter<T>::filter(const std::vector<T> &vec) const {
+    std::vector<T> result = this->a->filter(vec);
+    std::vector<T> b_result = this->b->filter(vec);
+
+    for (int i = 0; i < b_result.size(); i++) {
+        auto p = std::find(result.begin(), result.end(), b_result[i]);
+        if (p == result.end()) result.push_back(b_result[i]);
+    }
+
+    return result;
+}
+```
+
+```cpp [main.cpp]
+#include <iostream>
+
+#include "filter.hpp"
+
+/* 重载流输出运算符，方便输出 */
+std::ostream &operator<<(std::ostream &out, const std::vector<int> &a) {
+    for (int i = 0; i < a.size(); i++) {
+        out << a[i];
+        if (i != a.size() - 1) out << ", ";
+    }
+
+    return out;
+}
+
+int main() {
+    std::vector<int> vec;
+    for (int i = 0; i <= 25; i++) {
+        vec.push_back(i);
+    }
+
+    auto oddFilter = std::unique_ptr<IFilter<int>>(new OddIntegerFilter());
+    auto evenFilter = std::unique_ptr<IFilter<int>>(new EvenIntegerFilter());
+    auto primeFilter = std::unique_ptr<IFilter<int>>(new PrimeIntegerFilter());
+    auto compositeFilter =
+        std::unique_ptr<IFilter<int>>(new CompositeIntegerFilter());
+
+    std::cout << "Odd integers: " << (oddFilter->filter(vec)) << "\n";
+    std::cout << "Even integers: " << (evenFilter->filter(vec)) << "\n";
+    std::cout << "Prime integers: " << (primeFilter->filter(vec)) << "\n";
+    std::cout << "Composite integers: " << (compositeFilter->filter(vec))
+              << "\n";
+
+    auto evenAndPrimeFilter = std::unique_ptr<IFilter<int>>(
+        new AndFilter<int>(std::move(evenFilter), std::move(primeFilter)));
+    auto oddOrCompositeFilter = std::unique_ptr<IFilter<int>>(
+        new OrFilter<int>(std::move(oddFilter), std::move(compositeFilter)));
+
+    std::cout << "Even and prime integers: "
+              << (evenAndPrimeFilter->filter(vec)) << "\n";
+    std::cout << "Odd or composite integers: "
+              << (oddOrCompositeFilter->filter(vec)) << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+Odd integers: 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25
+Even integers: 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24
+Prime integers: 2, 3, 5, 7, 11, 13, 17, 19, 23
+Composite integers: 4, 6, 8, 9, 10, 12, 14, 15, 16, 18, 20, 21, 22, 24, 25
+Even and prime integers: 2
+Odd or composite integers: 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24
+```
+
+### 4. 组合模式
+
+在组合模式下，若干相似对象将以树形结构组织，例如 HTML 的 DOM 树、GUI 程序的各个组件实例之间的关系。
+
+```cpp
+/* 接口，可显示在屏幕上 */
+class IDisplayable {
+    public:
+        IDisplayable();
+        virtual ~IDisplayable();
+        virtual void Display() = 0;
+};
+
+/* 抽象类，布局（可以有多个子组件） */
+class Layout {
+    protected:
+        std::vector<std::unique_ptr<IDisplayable>> children;
+
+    public:
+        Layout();
+        virtual ~Layout();
+        virtual void AppendChild(std::unique_ptr<IDisplayable> &&widget);
+        virtual std::vector<std::unique_ptr<IDisplayable>> &Children();
+        virtual void RemoveChild(const std::unique_ptr<IDisplayable> &widget);
+};
+
+/* 抽象类，容器（只能有一个子组件） */
+class Container {
+    protected:
+        std::unique_ptr<IDisplayable> child;
+
+    public:
+        Container();
+        virtual ~Container();
+        virtual void Child(std::unique_ptr<IDisplayable> &&widget);
+        virtual std::unique_ptr<IDisplayable> &Child();
+};
+
+/* 输入框组件 */
+class InputWidget : public IDisplayable {
+    private:
+        std::string text;
+
+    public:
+        InputWidget();
+        ~InputWidget();
+        void Display() override;
+};
+
+/* 按钮组件 */
+class ButtonWidget : public IDisplayable, public Container {
+    public:
+        ButtonWidget();
+        ~ButtonWidget();
+        void Display() override;
+};
+
+/* 窗口组件 */
+class WindowWidget : public IDisplayable, public Layout {
+    public:
+        WindowWidget();
+        ~WindowWidget();
+        void Display() override;
+};
+```
+
+此处省略上述类的具体实现。
+
+### 5. 装饰器模式
+
+当需要扩展某个类，但又不希望改变该类的实现时，可以新建一个实现了原有类所有接口的类（**但不继承自原有类**），并且将原有类的实例作为新类的成员变量。这就是装饰器模式。
+
+一般情况下，装饰器类会继承自抽象装饰器类，抽象装饰器类含有一个抽象类类型的成员变量且实现所有此抽象类的接口。装饰器类不一定必须要扩展类，也可以“撤销”原有类的某些成员函数。
+
+```cpp
+/* 接口，机动战士 */
+class IMobileSuit {
+    public:
+        IMobileSuit();
+        virtual ~IMobileSuit();
+        virtual void Fire() = 0;
+};
+
+/* 抽象类，高达（实现机动战士接口），不可更名/更换制造商 */
+class Gundam : public IMobileSuit {
+    protected:
+        std::string codeName;
+        std::string manufacturer;
+
+        Gundam() = delete;
+
+    public:
+        Gundam(std::string &&codeName, std::string &&manufacturer);
+        virtual ~Gundam();
+        virtual std::string CodeName();
+        virtual std::string Manufacturer();
+        virtual void Fire() override;
+};
+
+/* 非抽象类，Mk-II 型高达，不可更名/更换制造商 */
+class MkIIGundam : public Gundam {
+    public:
+        MkIIGundam(std::string &&codeName, std::string &&manufacturer);
+        ~MkIIGundam();
+        void Fire() override;
+};
+
+/* 缴获的高达怎么不能更名？改！顺便给制造商隐藏了 */
+class GundamAdapter : public IMobileSuit {
+    protected:
+        std::string codeName; // 原有的代号是 protected 级别，外部类无法访问 // [!code highlight]
+        std::unique_ptr<Gundam> gundam; // [!code highlight]
+
+    public:
+        GundamAdapter();
+        GundamAdapter(std::string &&codeName, std::string &&manufacturer);
+        virtual ~GundamAdapter();
+        virtual std::string CodeName();
+        virtual std::string CodeName(std::string &&codeName);
+        virtual void Fire() override;
+};
+
+/* 缴获的 Mk-II 型高达，可以改名 */
+class MkIIGundamAdapter : public GundamAdapter {
+    public:
+        MkIIGundamAdapter();
+        MkIIGundamAdapter(std::string &&codeName, std::string &&manufacturer);
+        void Fire() override;
+};
+```
+
+### 6. 外观模式
+
+外观模式适用于现有项目的类数量庞大时。此时可以新建一个类作为调用者和原有项目之间的中介，对外提供一致的接口且对调用者隐藏原有项目的复杂性。
+
+```cpp
+/* 接口，数据库查询某个键的值 */
+class Database {
+    public:
+        Database();
+        virtual ~Database();
+        virtual std::string Search(const std::string &key) const = 0;
+};
+
+/* Redis 数据库 */
+class Redis : public Database {
+    private:
+        std::string password;
+
+    public:
+        Redis(std::string &&password);
+        ~Redis();
+        std::string Search(const std::string &key) const override;
+};
+
+/* MongDB 数据库 */
+class MongDB : public Database {
+    private:
+        std::string username;
+        std::string password;
+        std::uint16_t port;
+
+    public:
+        MongDB(std::string &&username, std::string &&password,
+               std::uint16_t port);
+        ~MongDB();
+
+        std::string Search(const std::string &key) const override;
+};
+
+/* 外观类，隐藏数据库实例的创建过程 */
+class DatabaseSearcher {
+    private:
+        std::unique_ptr<Database> redis;
+        std::unique_ptr<Database> mongDB;
+
+    public:
+        DatabaseSearcher();
+        ~DatabaseSearcher();
+
+        std::string SerachInRedis(const std::string &key) const;
+        std::string SerachInMongDB(const std::string &key) const;
+};
+```
+
+### 7. 享元模式
+
+如果需要大量使用相似实例，而又不希望创建大量相同实例以减少内存开销（浅拷贝），则可以使用享元模式。享元模式下，返回的实例是浅拷贝/引用/`shared_ptr<T>:typ`，因此需要慎重考虑是否需要修改实例的成员变量等状态以及线程安全问题。
+
+由于实际实现与原型模式极其相似（除了返回的实例是`shared_ptr<T>:typ`类型之外），因此此处不做赘述。
+
+### 8. 代理模式
+
+在代理模式下，调用者无法直接访问原有实例，对实例的操作都必须经过一个“代理”实例。最常见的代理模式是 getter/setter，C++ 里最经典的代理模式代表就是智能指针。
+
+```cpp
+/* 引用计数的智能指针，Rust 并感 */
+template <typename T>
+class Rc {
+    private:
+        T *pointer; // 指针
+        std::size_t count; // 引用计数
+
+        Rc() = delete;
+
+    public:
+        Rc(T *&&pointer);
+        ~Rc();
+
+        T *operator->() const; // 重载成员访问运算符，每次访问成员都必须经过 Rc 的实例
+        Rc operator=(Rc &a); // 重载拷贝运算符
+};
+```
+
+## 四、行为型模式
+
+行为型模式主要用于设计实例之间的通信。
+
+### 1. 责任链模式
+
+在责任链模式下，一次请求会沿着“链条”不断在实例间传递，直到请求被处理（或被“拦截”，不再继续传递）。例如在前端开发中，对网页中某个元素的点击事件会途经该元素的所有父元素。假设现有一个 HTML 网页，结构如下：
+
+```html [伪网页]
+<div>
+    <button>按钮</button>
+</div>
+```
+
+```cpp [伪 HTML 元素类型]
+class IHtmlElement {
+    public:
+        IHtmlElement();
+        virtual ~IHtmlElement();
+
+        /* 点击事件，参数分别为横纵坐标 */
+        virtual void OnClick(std::size_t x, std::size_t y) = 0;
+};
+
+class Window : public IHtmlElement {
+    private:
+        std::size_t width; // 窗口宽度
+        std::size_t height; // 窗口高度
+
+        std::shared_ptr<IHtmlElement> children; // 子元素
+
+    public:
+        void OnClick(std::size_t x, std::size_t y) override;
+};
+
+class HtmlDivElement : public IHtmlElement {
+    private:
+        std::size_t width; // <div> 元素宽度
+        std::size_t height; // <div> 元素高度
+        std::size_t left; // <div> 元素横坐标
+        std::size_t top; // <div> 元素纵坐标
+
+        std::shared_ptr<IHtmlElement> children; // 子元素
+
+    public:
+        void OnClick(std::size_t x, std::size_t y) override;
+};
+
+class HtmlButtonElement : public IHtmlElement {
+    private:
+        std::size_t width;
+        std::size_t height;
+        std::size_t left;
+        std::size_t top;
+
+    public:
+        void OnClick(std::size_t x, std::size_t y) override;
+};
+```
+
+在点击`<button>`元素时，首先`Window:typ`实例会收到一个点击事件（被调用`OnClick():fun`成员方法），然后根据点击坐标判断需要触发哪个子元素的点击事件，就这么依次向下传递直至触发`<button>`元素的点击事件，它没有子元素了，所以事件传递将在这里结束。
+
+### 2. 命令模式
+
+在命令模式下，发送请求这一过程被封装为了由请求执行器（实例）执行请求实例。例如在前端/GUI 开发中，不是每一次页面更新请求都能立即执行，一般会定时将一批请求统一执行以避免性能问题。
+
+```cpp
+/* 窗口类，可以变更宽高 */
+class Window {
+    private:
+        std::size_t height;
+        std::size_t width;
+
+    public:
+        Window();
+        ~Window();
+
+        void Height(std::size_t height);
+        std::size_t Height();
+
+        void Width(std::size_t width);
+        std::size_t Width();
+};
+
+/* 接口，更新请求 */
+class IUpdateRequest {
+    public:
+        IUpdateRequest();
+        virtual ~IUpdateRequest();
+
+        /* 执行更新 */
+        virtual void Update() = 0;
+};
+
+/* 高度更新请求 */
+class HeightUpdateRequest : public IUpdateRequest {
+    private:
+        bool isIncrease; // 是否为增加
+        std::size_t change; // 增加值
+        Window *window; // 窗口实例
+
+        HeightUpdateRequest() = delete;
+
+    public:
+        HeightUpdateRequest(Window *window);
+        ~HeightUpdateRequest();
+        void Update() override;
+};
+
+/* 宽度更新请求 */
+class WidthUpdateRequest : public IUpdateRequest {
+    private:
+        bool isIncrease;
+        std::size_t change;
+        Window *window;
+
+        WidthUpdateRequest() = delete;
+
+    public:
+        WidthUpdateRequest(Window *window);
+        ~WidthUpdateRequest();
+        void Update() override;
+};
+
+/* 更新执行器 */
+class UpdateRequestExecutor {
+    private:
+        /* 请求队列 */
+        std::queue<std::unique_ptr<IUpdateRequest>> queue;
+
+    public:
+        UpdateRequestExecutor();
+        ~UpdateRequestExecutor();
+
+        /* 添加请求 */
+        void PushRequest(std::unique_ptr<IUpdateRequest> &&request);
+        /* 执行请求 */
+        void ExecuteRequest();
+};
+```
+
+### 3. 解释器模式
+
+解释器模式主要用于评估简单语法是否合规。解释器模式与过滤器模式类似，只不过将过滤更换成判断某段字符串是否符合给定语法，此处不做赘述。
+
+### 4. 迭代器模式
+
+迭代器模式用于为不同容器提供遍历所有元素的通用方法，且对外隐藏内部元素的组织结构。
+
+```cpp
+/* 迭代器接口 */
+template <typename T>
+class IIterator {
+    public:
+        IIterator();
+        virtual ~IIterator();
+        virtual T Next() = 0;
+        virtual bool HasNext() = 0;
+};
+
+/* 环形缓冲区类（双端队列） */
+template <typename T>
+class RingBuffer {
+    private:
+        std::size_t head;
+        std::size_t tail;
+        std::size_t size;
+        std::size_t capacity;
+        T *buffer;
+
+    public:
+        RingBuffer();
+        RingBuffer(std::size_t capacity);
+        ~RingBuffer();
+
+        void PushBack(T &&value);
+        void PushFront(T &&value);
+
+        T PopBack();
+        T PopFront();
+
+        /* 内部类，环形缓冲区的迭代器 */
+        class RingBufferIterator : public IIterator<T> {
+            private:
+                std::size_t index;
+
+            public:
+                RingBufferIterator();
+                ~RingBufferIterator();
+                T Next() override;
+                bool HasNext() override;
+        };
+
+        /* 获取环形缓冲区的迭代器 */
+        RingBufferIterator Iter();
+};
+```
+
+### 5. 中介者模式
+
+中介者模式适用于多个实例之间通信的情况。实例之间发送消息只需“告诉”中介，无需知晓需要发送给哪个实例。
+
+```cpp
+using Callback = std::function<void(std::string)>;
+
+/* 中介者类，事件总线 */
+class EventBus {
+    private:
+        /* 映射：事件类型 -> 回调函数 */
+        std::unordered_map<std::string, std::unordered_set<Callback>> callbacks;
+
+    public:
+        EventBus();
+        ~EventBus();
+
+        /* 注册回调函数 */
+        void Register(const std::string &event, Callback &&callback);
+
+        /* 删除回调函数 */
+        void Unregister(const std::string &event, Callback &&callback);
+
+        /* 为某一事件类型发布消息 */
+        void Dispatch(const std::string &event, std::string &&message);
+};
+```
+
+上述`EventBus:typ`类是一个简单的事件总线类的声明。当某些实例需要发布消息时，无需查找需要接收消息的实例，统一通过事件总线实例发布即可；需要接收消息的实例，统一在事件总线实例内注册回调函数即可。
+
+### 6. 备忘录模式
+
+备忘录模式用于保存实例状态，以便撤销更改时可以恢复状态。备忘录模式一般有三种类：保存状态的备忘录类、状态会更改的类、保存备忘录并对外提供的类。
+
+```cpp
+/* 画布类 */
+class Canvas {
+    private:
+        std::size_t width; // 画布宽度
+        std::size_t height; // 画布高度
+        unsigned char **pixels; // 每个像素的值
+
+        /* 备忘录类 */
+        class State {
+            private:
+                unsigned char **pixels; // 保存的状态
+
+            public:
+                State();
+                ~State();
+                unsigned char **Pixels() const;
+        };
+
+        /* 状态队列 */
+        class StateQueue {
+            private:
+                std::queue<State> states;
+
+            public:
+                State Pop();
+                void Push(State &&state);
+        };
+
+        StateQueue queue;
+
+    public:
+        Canvas();
+        ~Canvas();
+        void DrawLine();
+        void DrawCircle();
+        void DrawTriangle();
+        void DrawRectangle();
+
+        /* 内部逻辑：生成 State 实例并入队 */
+        void Save();
+
+        /* 内部逻辑：出队 State 实例并恢复状态 */
+        void Recover();
+};
+```
+
+### 7. 观察者模式
+
+观察者模式是一种一对多模式，在该模式下一个实例的状态发生改变时，所有依赖于该状态的实例都会收到更新通知。
+
+```cpp [ref.hpp]
+/* 接口，观察者 */
+class IObserver {
+    public:
+        IObserver();
+        virtual ~IObserver();
+
+        /* 有状态更新时触发此方法 */
+        virtual void Update() = 0;
+};
+
+/* Ref 类，响应式状态 */
+template <typename T>
+class Ref {
+    private:
+        T value;
+
+        /* 所有观察此响应式状态的观察者 */
+        std::unordered_set<IObserver *> observers; // [!code highlight]
+
+        Ref() = delete;
+
+    public:
+        Ref(T &&value);
+        ~Ref();
+
+        /* 触发所有观察者的状态更新 */
+        void TriggerUpdate() const;
+
+        void AddObserver(IObserver *observer);
+        void RemoveObserver(IObserver *observer);
+
+        const T &Value() const;
+        void Value(T &&value); // 将在此处触发状态更新
+};
+
+/* 观察者 */
+template <typename T>
+class Computed : public IObserver {
+    private:
+        T result;
+
+        /* 观察中的状态 */
+        std::shared_ptr<Ref<T>> dependency;
+
+        /* 计算函数 */
+        std::function<T(const T &)> operation;
+
+        Computed() = delete;
+
+    public:
+        Computed(const std::shared_ptr<Ref<T>> &dependency,
+                 std::function<T(const T &)> &&operation);
+        ~Computed();
+
+        const T &Result() const;
+
+        void Update() override;
+};
+```
+
+```cpp [ref.cpp]
+IObserver::IObserver() {}
+IObserver::~IObserver() {}
+
+template <typename T>
+Ref<T>::Ref(T &&value) : value(value) {}
+template <typename T>
+Ref<T>::~Ref() {}
+template <typename T> // [!code highlight]
+void Ref<T>::TriggerUpdate() const { // [!code highlight]
+    for (auto p = this->observers.begin(); p != observers.end(); p++) { // [!code highlight]
+        (*p)->Update(); // [!code highlight]
+    } // [!code highlight]
+} // [!code highlight]
+template <typename T>
+void Ref<T>::AddObserver(IObserver *observer) {
+    this->observers.insert(observer);
+}
+template <typename T>
+void Ref<T>::RemoveObserver(IObserver *observer) {
+    this->observers.erase(observer);
+}
+template <typename T>
+const T &Ref<T>::Value() const {
+    return this->value;
+}
+template <typename T>
+void Ref<T>::Value(T &&value) { // [!code highlight]
+    bool flag = this->value != value; // [!code highlight]
+    this->value = value; // [!code highlight]
+    if (flag) this->TriggerUpdate(); // [!code highlight]
+} // [!code highlight]
+
+template Ref<int>::Ref(int &&value);
+template Ref<int>::~Ref();
+template const int &Ref<int>::Value() const;
+template void Ref<int>::Value(int &&value);
+
+template <typename T>
+Computed<T>::Computed(const std::shared_ptr<Ref<T>> &dependency,
+                      std::function<T(const T &)> &&operation)
+    : dependency(dependency), operation(operation) {
+    dependency->AddObserver(this);
+    this->Update();
+}
+template <typename T>
+Computed<T>::~Computed() {
+    this->dependency->RemoveObserver(this);
+}
+template <typename T>
+const T &Computed<T>::Result() const {
+    return this->result;
+}
+template <typename T>
+void Computed<T>::Update() {
+    this->result = this->operation(dependency->Value());
+}
+
+template Computed<int>::Computed(const std::shared_ptr<Ref<int>> &dependency,
+                                 std::function<int(const int &)> &&operation);
+template Computed<int>::~Computed();
+template const int &Computed<int>::Result() const;
+```
+
+```cpp [main.cpp]
+int pow2(const int &a) { return a * a; }
+int mul2(const int &a) { return a * 2; }
+
+int main() {
+    auto ref = std::shared_ptr<Ref<int>>(new Ref<int>(114));
+
+    auto pow = std::shared_ptr<Computed<int>>(new Computed<int>(ref, pow2));
+    auto mul = std::shared_ptr<Computed<int>>(new Computed<int>(ref, mul2));
+
+    std::cout << "ref ^ 2 = " << pow->Result()
+              << ", ref * 2 = " << mul->Result() << "\n";
+
+    ref->Value(514);
+    std::cout << "ref ^ 2 = " << pow->Result()
+              << ", ref * 2 = " << mul->Result() << "\n";
+
+    ref->Value(1919);
+    std::cout << "ref ^ 2 = " << pow->Result()
+              << ", ref * 2 = " << mul->Result() << "\n";
+
+    ref->Value(810);
+    std::cout << "ref ^ 2 = " << pow->Result()
+              << ", ref * 2 = " << mul->Result() << "\n";
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. --preset dbg && mingw32-make && ../bin/Hello
+ref ^ 2 = 12996, ref * 2 = 228
+ref ^ 2 = 264196, ref * 2 = 1028
+ref ^ 2 = 3682561, ref * 2 = 3838
+ref ^ 2 = 656100, ref * 2 = 1620
+```
+
+### 8. 状态模式
+
+在状态模式下，实例的行为会根据其状态而变化。状态模式下至少含有三个类：上下文类、抽象状态类/接口和具体状态类。
+
+```cpp
+/* 接口，状态 */
+class IState {
+    public:
+        IState();
+        virtual ~IState();
+        virtual void UpdateState(Context &a) = 0;
+};
+
+/* 上下文类（类似于 Promise） */
+class Context {
+    private:
+        std::shared_ptr<IState> state; // 当前状态
+        bool isPending; // 是否正在执行任务
+
+    public:
+        Context();
+        ~Context();
+
+        std::shared_ptr<IState> State();
+        void State(const std::shared_ptr<IState> &state) const;
+
+        /* 获取任务执行状态 */
+        bool IsPending() const;
+};
+
+/* 任务执行中 */
+class PendingState : public IState {
+    public:
+        PendingState();
+        ~PendingState();
+
+        /* 将上下文实例的 isPending 成员设置为 false，同时执行一些任务 */
+        void UpdateState(Context &a) override;
+};
+
+/* 任务执行完毕 */
+class ReadyState : public IState {
+    public:
+        ReadyState();
+        ~ReadyState();
+
+        /* 将上下文实例的 isPending 成员设置为 true */
+        void UpdateState(Context &a) override;
+        void UpdateState(Context &a) override;
+};
+```
+
+### 9. 空对象模式
+
+空对象模式下，`nullptr:kwd`不再是指针的默认值，而应是指向默认值实例的指针。实例的默认值需提供调用实例各个方法时的默认行为。空对象模式下至少有三个类：抽象类/接口、具体类和空类。
+
+```cpp
+/* 接口，文件 */
+class IFile {
+    public:
+        IFile();
+        virtual ~IFile();
+        virtual std::string Read() = 0;
+        virtual void Write(std::string) = 0;
+};
+
+/* 常规文件类 */
+class CommonFile : public IFile {
+    public:
+        CommonFile();
+        ~CommonFile();
+        std::string Read() override;
+        void Write(std::string) override;
+};
+
+/* 套接字文件类 */
+class SocketFile : public IFile {
+    public:
+        SocketFile();
+        ~SocketFile();
+        std::string Read() override;
+        void Write(std::string) override;
+};
+
+/* 打开文件失败时返回的类 */
+class NullFile : public IFile {
+    public:
+        NullFile();
+        ~NullFile();
+        std::string Read() override; // 返回空字符串 // [!code highlight]
+        void Write(std::string) override; // 什么都不做 // [!code highlight]
+};
+
+/* 文件工厂 */
+class FileFactory {
+    public:
+        FileFactory();
+        ~FileFactory();
+
+        /**
+         * 根据参数类型打开文件
+         * 1. 路径：返回常规文件实例
+         * 2. 网络地址：返回套接字文件实例
+         * 打开失败时，返回空文件实例
+         */
+        std::shared_ptr<IFile> Open(std::string &&path) const;
+};
+```
+
+### 10. 策略模式
+
+在策略模式下，实例的行为可以在运行时更改。策略模式已在观察者模式一节的代码中有所体现，`Computed<T>:typ`实例的计算结果因传入的`std::function<T>:typ`参数不同而有所变化。但策略模式下一般至少有三个类：执行算法的类、抽象算法类、具体算法类。关于策略模式此处不做赘述。
+
+### 11. 模板模式
+
+在模板模式下，抽象类提供 hook（虚函数）以便派生类修改其行为，但 hook 的执行顺序由抽象类决定。
+
+```cpp
+class VueTemplate {
+    public:
+        VueTemplate() {
+            this->OnBeforeCreate();
+            /// ······ 初始化成员
+            this->OnCreated();
+        }
+        virtual ~VueTemplate();
+
+        /* 各个 hook 方法 */
+        virtual void OnBeforeCreate() = 0;
+        virtual void OnCreated() = 0;
+        virtual void OnBeforeMount() = 0;
+        virtual void OnMounted() = 0;
+        virtual void OnBeforeUpdate() = 0;
+        virtual void OnUpdated() = 0;
+        virtual void OnBeforeUnmount() = 0;
+        virtual void OnUnmounted() = 0;
+
+        /* 组件运行时 */
+        void SyncWithDOM() {
+            /* 组件挂载时 */
+            this->OnBeforeMount();
+            /// ······ 将组件插入至 DOM 树中
+            this->OnMounted();
+
+            /* 状态更新时 */
+            this->OnBeforeUpdate();
+            /// ······ 更新状态
+            this->OnUpdated();
+
+            /* 组件卸载时 */
+            this->OnBeforeUnmount();
+            /// ······ 从 DOM 树中移除组件
+            this->OnUnmounted();
+        }
+};
+```
+
+### 12. 访问者模式
+
+在访问者模式下，访问者类需要实现对各个被访问者非抽象类的访问方法。
+
+```cpp
+/* 接口，编译器（访问者） */
+class ICompiler {
+    public:
+        ICompiler();
+        virtual ~ICompiler();
+
+        /* 利用函数重载，编译器会自行决定该调用哪个方法 */
+        virtual void Compile(const X86Arch &x86) const = 0;
+        virtual void Compile(const ArmArch &arm) const = 0;
+        virtual void Compile(const RiscvArch &riscv) const = 0;
+};
+
+/* GCC 编译器 */
+class GccCompiler : public ICompiler {
+    public:
+        GccCompiler();
+        ~GccCompiler();
+        void Compile(const X86Arch &x86) const override;
+        void Compile(const ArmArch &arm) const override;
+        void Compile(const RiscvArch &riscv) const override;
+};
+
+/* Clang 编译器 */
+class ClangCompiler : public ICompiler {
+    public:
+        ClangCompiler();
+        ~ClangCompiler();
+        void Compile(const X86Arch &x86) const override;
+        void Compile(const ArmArch &arm) const override;
+        void Compile(const RiscvArch &riscv) const override;
+};
+
+/* 接口，CPU 架构（被访问者） */
+class IArch {
+    public:
+        IArch();
+        virtual ~IArch();
+        virtual void GenerateBinary(
+            const std::unique_ptr<ICompiler> &compiler) = 0;
+};
+
+/* X86 架构 */
+class X86Arch : public IArch {
+    public:
+        X86Arch();
+        ~X86Arch();
+        void GenerateBinary(
+            const std::unique_ptr<ICompiler> &compiler) override {
+            /* 利用函数重载 */
+            compiler->Compile(*this); // [!code highlight]
+        }
+};
+
+/* ARM 架构 */
+class ArmArch : public IArch {
+    public:
+        ArmArch();
+        ~ArmArch();
+        void GenerateBinary(
+            const std::unique_ptr<ICompiler> &compiler) override {
+            compiler->Compile(*this);
+        }
+};
+
+/* RISC-V 架构 */
+class RiscvArch : public IArch {
+    public:
+        RiscvArch();
+        ~RiscvArch();
+        void GenerateBinary(
+            const std::unique_ptr<ICompiler> &compiler) override {
+            compiler->Compile(*this);
+        }
+};
+```

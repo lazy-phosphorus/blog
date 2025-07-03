@@ -1,0 +1,2270 @@
+import { Note, NoteTitle } from "@/components/note";
+
+<Note type="warn" title="限制级警告！">
+
+GLib 库仅适合会 C 语言编程、理解面向对象编程思想的人进行学习。
+
+</Note>
+
+## 零、参考文献
+
+- [GObject Tutorial](https://github.com/ToshioCP/Gobject-tutorial/ "点击跳转")
+- [GObject 官方文档](https://docs.gtk.org/gobject/ "点击跳转")
+- [GLib 官方文档](https://docs.gtk.org/glib/ "点击跳转")
+- [Gio 官方文档](https://docs.gtk.org/gio/ "点击跳转")
+- [GModule 官方文档](https://docs.gtk.org/gmodule/ "点击跳转")
+
+## 一、简介
+
+GLib 库是由 GNOME 基金会维护的一个由纯 C 语言编写的跨平台开源库。该库又可以分为四个部分：提供面向对象编程支持的 GObject、提供可移植动态加载模块（动态链接库）支持的 GModule、提供输入输出支持的 Gio 与提供基础数据结构和工具的 GLib。
+
+GLib 库诞生于 GTK 库。GTK 库的开发者们在经年累月的维护中，将与操作系统交互的代码从 GTK 库中分离，形成了 GLib 库。截止本文撰写之时，Windows 系统上可用的 GLib 最新版本为 2.82.1-1。
+
+由于动态加载动态链接库的 GModule 库相对简单，本文将不作记录，详情请参考[官方文档](https://docs.gtk.org/gmodule/modules.html "点击跳转")。
+
+## 二、面向对象
+
+C 语言其本身缺少面向对象的部分特性，但 GObject 库通过宏实现了基本的面向对象特性。使用 GObject 库时，所有类均为`GObject:typ`类的子类。
+
+### 1. `GObject:typ`类与`GObjectClass:typ`结构体
+
+`GObject:typ`类是整个 GLib 库里所有类型的基类，而`GObjectClass:typ`结构体则存储了`GObject:typ`类型的信息。简而言之，`GObject:typ`实例可以有多个，而`GObjectClass:typ`实例最多有 1 个。
+
+```c [main.c]
+#include <glib-object.h>
+#include <stdio.h>
+
+int main() {
+    GObject *a = NULL, *b = NULL, *c = NULL;
+    GObjectClass *a_class = NULL, *b_class = NULL, *c_class = NULL;
+
+    // GObject 库新建类实例的方式
+    a = g_object_new(G_TYPE_OBJECT, NULL);
+    b = g_object_new(G_TYPE_OBJECT, NULL);
+    c = g_object_new(G_TYPE_OBJECT, NULL);
+
+    // GObject 库获取实例类型信息的方式
+    a_class = G_OBJECT_GET_CLASS(a);
+    b_class = G_OBJECT_GET_CLASS(b);
+    c_class = G_OBJECT_GET_CLASS(c);
+
+    printf("a -> %p\nb -> %p\nc -> %p\n", a, b, c);
+    printf("a_class -> %p\nb_class -> %p\nc_class -> %p\n", a_class, b_class,
+           c_class);
+
+    // GObject 库释放实例的方式
+    g_object_unref(a);
+    g_object_unref(b);
+    g_object_unref(c);
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+a -> 0000013E80285A80
+b -> 0000013E80285580
+c -> 0000013E80285AA0
+a_class -> 0000013E8029C6F0
+b_class -> 0000013E8029C6F0
+c_class -> 0000013E8029C6F0
+```
+
+上述代码中，`G_TYPE_OBJECT:kwd`是 GObject 库定义的宏，代表了`GObject:typ`类。每一个类都有独一无二且与之对应的宏。GObject 库对于实例的内存管理方式是引用计数。创建实例时引用计数初始为 1；当调用`g_object_unref():fun`方法时，该实例的引用计数将会减 1；引用计数归 0 时，实例将被释放。
+
+`GObjectClass:typ`结构体实例存储了`GObject:typ`类型的方法、属性等信息。使用这种结构体可以实现动态反射。GObject 库中，每一个类都有与之唯一对应的存储该类信息的结构体。
+
+### 2. 不可派生类
+
+在自定义类之前，需要先考虑此类型是否可以被继承。不可派生类型需要使用`G_DECLARE_FINAL_TYPE:kwd`宏声明，而可派生类型则需要使用`G_DECLARE_DERIVABLE_TYPE:kwd`宏声明。
+
+与 C++一样，GObject 也推荐将类的声明与实现分离（声明放在头文件，实现放在`.c`文件内）。若一个类被定义为不可派生的，则其成员变量均应在`.c`文件内定义。因此，不可派生类的所有成员变量均为私有（其它文件引入头文件后仅知道有此结构体，但不知道此结构体内部成员），若需访问/修改私有成员，一般会使用公有属性。
+
+下述代码实现了一个简单的字符串类型：
+
+```c [sample-string.h]
+#ifndef __SAMPLE_STRING_H__
+#define __SAMPLE_STRING_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS // 必需，表示开始声明类型及其成员方法
+
+// 惯例，使用 <命名空间>_TYPE_<类名> 宏表示此类型的“代号”
+#define SAMPLE_TYPE_STRING (sample_string_get_type())
+
+// 宏，声明类型名并且定义 sample_string_get_type() 函数等
+// 参数分别为：类型名、成员函数前缀、命名空间、去除命名空间后的类型名、父类类名
+G_DECLARE_FINAL_TYPE(SampleString, sample_string, SAMPLE, STRING, GObject)
+
+// 构造函数
+SampleString *sample_string_new(gsize capacity);
+
+// 构造函数的“重载”
+SampleString *sample_string_new_with_text(const gchar *const restrict text,
+                                          gsize capacity);
+
+G_END_DECLS // 必需，结束声明类型及其成员方法
+
+#endif  // __SAMPLE_STRING_H__
+```
+
+```c [sample-string.c]
+#include "sample-string.h"
+
+// 属性的枚举值（或唯一 ID）
+enum {
+    SAMPLE_STRING_TEXT = 1,
+    SAMPLE_STRING_LENGTH = 2,
+    SAMPLE_STRING_CAPACITY = 3,
+};
+
+// 必需，定义 SampleString 类型
+struct _SampleString {
+    GObject parent_instance; // 必需，且必须为第一个字段 // [!code highlight]
+
+    gchar *array;           // 字符串数组
+    gsize length;           // 文本长度
+    gsize capacity;         // 当前容量
+};
+
+// 宏，自动完成 SampleStringClass 的定义等任务
+// 参数分别为：类型名、成员函数前缀、父类“类型代号”
+G_DEFINE_TYPE(SampleString, sample_string, G_TYPE_OBJECT);
+
+// 所有属性的写入都会调用此函数完成
+static void sample_string_set_property(GObject *object, guint property_id,
+                                       const GValue *value, GParamSpec *pspec) {
+    // 带检查的类型转换
+    // SAMPLE_STRING() 宏函数由 G_DECLARE_FINAL_TYPE 宏定义
+    SampleString *this = SAMPLE_STRING(object);
+
+    switch (property_id) {
+        case SAMPLE_STRING_TEXT: {
+            // 写入 Text 属性
+            gchar *temp = g_value_dup_string(value);
+            if (strlen(temp) > this->capacity) {
+                this->capacity = strlen(temp);
+                this->array = g_realloc(this->array, this->capacity);
+            }
+            memcpy(this->array, temp, this->capacity);
+            g_free(temp);
+            this->length = strlen(temp);
+            break;
+        }
+        case SAMPLE_STRING_CAPACITY: {
+            // 写入 Capacity 属性
+            // 注意，下文注册此属性时的 flag 含有 G_PARAM_CONSTRUCT_ONLY
+            this->capacity = g_value_get_uint64(value);
+            break;
+        }
+        default: {
+            // 其余属性不可写，或不存在此属性编号
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            break;
+        }
+    }
+    g_print("sample_string_set_property() finished.\n");
+}
+
+// 所有属性的读取都会调用此函数完成
+static void sample_string_get_property(GObject *object, guint property_id,
+                                       GValue *value, GParamSpec *pspec) {
+    SampleString *this = SAMPLE_STRING(object);
+    switch (property_id) {
+        case SAMPLE_STRING_TEXT: {
+            // 读取 Text 属性
+            g_value_set_string(value, this->array);
+            break;
+        }
+        case SAMPLE_STRING_LENGTH: {
+            // 读取 Length 属性
+            g_value_set_uint64(value, this->length);
+            break;
+        }
+        case SAMPLE_STRING_CAPACITY: {
+            // 读取 Capacity 属性
+            g_value_set_uint64(value, this->capacity);
+            break;
+        }
+        default: {
+            // 没有其它属性了
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            break;
+        }
+    }
+    g_print("sample_string_get_property() finished.\n");
+}
+
+// 当调用 g_object_unref() 时，触发此函数
+static void sample_string_dispose(GObject *object) {
+
+    // 必需，sample_string_parent_class 变量由 G_DEFINE_TYPE 宏定义，因此仅能在此文件内使用
+    // 触发父类的 dispose() 方法
+    G_OBJECT_CLASS(sample_string_parent_class)->dispose(object);
+
+    g_print("sample_string_dispose() finished.\n");
+}
+
+// 当引用计数归 0 时，触发此函数
+static void sample_string_finalize(GObject *object) {
+    SampleString *this = SAMPLE_STRING(object);
+    g_free(this->array);
+
+    // 必需，触发父类的 finalize() 方法
+    G_OBJECT_CLASS(sample_string_parent_class)->finalize(object);
+
+    g_print("sample_string_finalize() finished.\n");
+}
+
+// 必需，初始化函数
+static void sample_string_init(SampleString *this) {
+    g_print("sample_string_init() finished.\n");
+}
+
+// 当实例构造完毕后触发
+static void sample_string_constructed(GObject *object) {
+    SampleString *this = SAMPLE_STRING(object);
+
+    this->array = g_new(gchar, this->capacity);
+
+    // 必需，触发父类的 constructed() 方法
+    G_OBJECT_CLASS(sample_string_parent_class)->constructed(object);
+}
+
+// 必需，类型信息对象初始化函数
+// SampleStringClass 类型由 G_DECLARE_FINAL_TYPE 宏声明
+static void sample_string_class_init(SampleStringClass *class) {
+    GObjectClass *object_class = G_OBJECT_CLASS(class);
+    GParamSpec *temp = NULL;
+
+    // 注册函数，虚函数（抽象方法）就是通过这种方式实现的
+    object_class->constructed = sample_string_constructed;
+    object_class->set_property = sample_string_set_property;
+    object_class->get_property = sample_string_get_property;
+    object_class->dispose = sample_string_dispose;
+    object_class->finalize = sample_string_finalize;
+
+    // 注册属性
+    // G_PARAM_READWRITE 代表可读可写
+    // G_PARAM_CONSTRUCT_ONLY 代表仅在构造实例时才可写
+    temp = g_param_spec_string("text", "Text", "Text stored inside the struct.",
+                               NULL, G_PARAM_READWRITE);
+    g_object_class_install_property(object_class, SAMPLE_STRING_TEXT, temp);
+
+    temp = g_param_spec_uint64("length", "Length", "Text length.", 0,
+                               G_MAXUINT64, 0, G_PARAM_READABLE);
+    g_object_class_install_property(object_class, SAMPLE_STRING_LENGTH, temp);
+
+    temp = g_param_spec_uint64("capacity", "Capacity", "Text capacity.", 0,
+                               G_MAXUINT64, 0,
+                               G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, SAMPLE_STRING_CAPACITY, temp);
+
+    g_print("sample_string_class_init() finished.\n");
+}
+
+// 构造函数的定义
+SampleString *sample_string_new(gsize capacity) {
+    SampleString *this =
+        // g_object_new() 函数的最后一个参数必须为 NULL
+        g_object_new(SAMPLE_TYPE_STRING, "capacity", capacity, NULL);
+    return this;
+}
+
+// 构造函数“重载”的定义
+SampleString *sample_string_new_with_text(const gchar *const restrict text,
+                                          gsize capacity) {
+    GValue value = G_VALUE_INIT;
+    SampleString *this =
+        g_object_new(SAMPLE_TYPE_STRING, "capacity", capacity, NULL);
+    g_value_init(&value, G_TYPE_STRING);
+    g_value_set_string(&value, text);
+    g_object_set_property(G_OBJECT(this), "text", &value);
+    return this;
+}
+```
+
+```c [main.c]
+#include <glib-object.h>
+
+#include "sample-string.h"
+
+// 尝试获取三种属性的值
+int main() {
+    GValue text = G_VALUE_INIT, length = G_VALUE_INIT, capacity = G_VALUE_INIT;
+    SampleString *a = sample_string_new_with_text("1145141919810", 20);
+
+    g_value_init(&text, G_TYPE_STRING);
+    g_object_get_property(G_OBJECT(a), "text", &text);
+    g_print("a->text = %s\n", g_value_get_string(&text));
+
+    g_value_init(&length, G_TYPE_UINT64);
+    g_object_get_property(G_OBJECT(a), "length", &length);
+    g_print("a->length = %llu\n", g_value_get_uint64(&length));
+
+    g_value_init(&capacity, G_TYPE_UINT64);
+    g_object_get_property(G_OBJECT(a), "capacity", &capacity);
+    g_print("a->capacity = %llu\n", g_value_get_uint64(&capacity));
+
+    g_object_unref(a);
+
+    return 0;
+}
+```
+
+```console [命令行]
+cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+sample_string_class_init() finished.
+sample_string_init() finished.
+sample_string_set_property() finished.
+sample_string_set_property() finished.
+sample_string_get_property() finished.
+a->text = 1145141919810
+sample_string_get_property() finished.
+a->length = 13
+sample_string_get_property() finished.
+a->capacity = 20
+sample_string_dispose() finished.
+sample_string_finalize() finished.
+```
+
+不难看出 GObject 库使用了大量的宏来辅助定义类型。在读取/写入属性时使用了`GValue:typ`类型。`G_VALUE_INIT:kwd`是宏，代表了`GValue:typ`实例的唯一合法初始值。此类型将在“动态类型”一节详述。另，上述代码中还使用了诸如`gchar:typ`、`gsize:typ`等类型，这些类型是 GLib 库中基本类型的别名。
+
+自定义类型的实例构造有很多种实现方式，具体实现取决于该类型的功能与特性等。以上述代码为例，通过调用`g_object_new():fun`函数初始化实例时，首先 GObject 库会在堆上请求足够大小的空间；其次`sample_string_init():fun`函数会被调用，该函数与 C++的无参构造函数类似，因此有局限性；然后根据`g_object_new():fun`的参数，对各个指定的属性写入值；最后，调用`sample_string_constructed():fun`函数。整个构造过程有 3 个阶段程序员可以介入，因此实现方式多种多样，既可以只使用某个阶段，也可以混合搭配。
+
+当首次构造某个类型的实例时，会在构造实例之前先构造此类型信息的实例，例如`SampleStringClass:typ`的实例，这种实例有且最多仅有 1 个，仅在需要的时候才构造。
+
+当调用`g_object_unref():fun`函数时，若引用计数因此次调用而归 0，则会触发该实例的`dispose():fun`方法，`finalize():fun`方法也会紧接着被触发。`dispose():fun`方法结束时，实例应该将其有引用计数的成员释放完毕。该方法有可能被多次触发。当某个类型的最后一个实例被释放时，存储该类型信息的实例也会被释放。
+
+### 3. 可派生类
+
+一般的公有方法就像上文代码中的构造函数一样处理（声明放在头文件，实现放在`.c`文件内）即可。对于公有的虚函数（抽象方法），处理方式则稍有不同。
+
+```c [sample-list.h]
+#ifndef __SAMPLE_LIST_H__
+#define __SAMPLE_LIST_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+// 声明可派生类
+G_DECLARE_DERIVABLE_TYPE(SampleList, sample_list, SAMPLE, LIST, GObject)
+
+// 存储 SampleList 类信息的结构体
+struct _SampleListClass {
+    GObjectClass parent_class; // [!code highlight]
+
+    // 虚函数
+    void (*push_front)(SampleList *const restrict this, gint item);
+    void (*push_back)(SampleList *const restrict this, gint item);
+    void (*pop_front)(SampleList *const restrict this);
+    void (*pop_back)(SampleList *const restrict this);
+};
+
+// 成员函数的声明，其内部实现应当调用虚函数
+void sample_list_push_back(SampleList *const restrict this, gint item);
+
+void sample_list_pop_back(SampleList *const restrict this);
+
+G_END_DECLS
+
+#endif  // __SAMPLE_LIST_H__
+```
+
+```c [sample-list.c]
+#include "sample-list.h"
+
+typedef struct {
+    gsize length;
+    gsize capacity;
+    gint *array;
+} SampleListPrivate;  // 注意，此结构体名称有特定要求
+
+// 也可以使用 G_DEFINE_TYPE 宏
+// 若使用 G_DEFINE_TYPE_WITH_PRIVATE 宏，则私有变量必须定义在 <类型名>Private 结构体内
+G_DEFINE_TYPE_WITH_PRIVATE(SampleList, sample_list, G_TYPE_OBJECT);
+
+// 成员函数的实现
+void sample_list_push_back(SampleList *const restrict this, gint item) {
+    SampleListClass *class = NULL;
+
+    // 类型检查
+    // SAMPLE_IS_LIST() 函数由 G_DECLARE_DERIVABLE_TYPE 宏定义
+    g_return_if_fail(SAMPLE_IS_LIST(this));
+
+    class = SAMPLE_LIST_GET_CLASS(this);
+
+    // 虚函数必须被实现
+    g_return_if_fail(class->push_back != NULL);
+
+    class->push_back(this, item);
+}
+
+void sample_list_pop_back(SampleList *const restrict this) {
+    SampleListClass *class = NULL;
+    g_return_if_fail(SAMPLE_IS_LIST(this));
+    class = SAMPLE_LIST_GET_CLASS(this);
+    g_return_if_fail(class->pop_back != NULL);
+    class->pop_back(this);
+}
+
+// 实例初始化函数
+static void sample_list_init(SampleList *this) {
+    SampleListPrivate *private = sample_list_get_instance_private(this);
+    private->length = 0;
+    private->capacity = 10;
+    private->array = g_new(gint, 10);
+}
+
+// 存储类信息的实例初始化函数
+static void sample_list_class_init(SampleListClass *class) {
+    // 如果赋值为 NULL，则为纯虚函数
+    // 也可以给出虚函数的默认实现
+    class->pop_back = NULL;
+    class->pop_front = NULL;
+    class->push_back = NULL;
+    class->push_front = NULL;
+}
+```
+
+若需要实现私有虚函数，则不写头文件内对应的成员方法声明即可，例如删除头文件内的`sample_list_push_back():fun`函数声明后，`push_back():fun`虚函数就变为私有虚函数。在`GObject:typ`类中就声明了若干虚函数，例如`dispose():fun`方法和`finalize():fun`方法。在重写虚函数的时候，若该虚函数不是纯虚函数，就需要在子类对应的方法实现里调用该虚函数。
+
+### 4. 接口
+
+定义一个接口需要使用`G_DECLARE_INTERFACE:kwd`宏。
+
+```c [sample-icomparable.h]
+#ifndef __SAMPLE_I_COMPARABLE_H__
+#define __SAMPLE_I_COMPARABLE_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+// 可选
+#define SAMPLE_TYPE_ICOMPARABLE sample_icomparable_get_type()
+
+// 声明接口
+// 参数分别为：接口名、接口方法前缀、命名空间、去命名空间后的接口名、实现此接口的类型必需也实现某接口或继承自某类
+G_DECLARE_INTERFACE(SampleIComparable, sample_icomparable, SAMPLE, ICOMPARABLE,
+                    GObject)
+
+// 必需，_SampleIComparableInterface 结构体被 G_DECLARE_INTERFACE 宏声明但未定义
+// 类型名规则：_<接口名>Interface
+struct _SampleIComparableInterface {
+    GTypeInterface parent_iface;    // 接口也有“父类”，注意父类类型是 GTypeInterface // [!code highlight]
+
+    // 通过类似公有虚函数的方式来声明接口方法
+    void (*compare)(SampleIComparable *this,
+                    SampleIComparable *item,
+                    gint *const restrict result);
+};
+
+// 接口不公开内部方法就没有意义了
+void sample_icomparable_compare(SampleIComparable *this,
+                                SampleIComparable *item,
+                                gint *const restrict result);
+
+G_END_DECLS
+
+#endif  // __SAMPLE_I_COMPARABLE_H__
+```
+
+```c [sample-icomparable.c]
+#include "sample-icomparable.h"
+
+// 定义接口
+G_DEFINE_INTERFACE(SampleIComparable, sample_icomparable, G_TYPE_OBJECT)
+
+static void sample_icomparable_default_init(SampleIComparableInterface *interface) {
+    // GObject 库的特色，接口也可以有属性和私有变量等
+}
+
+void sample_icomparable_compare(SampleIComparable *this,
+                                SampleIComparable *item,
+                                gint *const restrict result) {
+    SampleIComparableInterface *interface = NULL;
+
+    // 类型检查
+    g_return_if_fail(SAMPLE_IS_ICOMPARABLE(this));
+    g_return_if_fail(result != NULL);
+
+    interface = SAMPLE_ICOMPARABLE_GET_IFACE(this);
+
+    // 必需实现接口声明的方法
+    g_return_if_fail(interface->compare != NULL);
+
+    interface->compare(this, item, result);
+}
+```
+
+上述代码定义了`SampleIComparable:typ`接口，实现了该接口的类型可以与同类实例之间比大小。
+
+让某个类型实现接口，需要使用`G_DEFINE_TYPE_WITH_CODE:kwd`宏。下面以`SampleString:typ`类型为例。
+
+```c
+// 函数声明
+static void sample_icomparable_interface_init(
+    SampleIComparableInterface *interface);
+
+G_DEFINE_TYPE(SampleString, sample_string, G_TYPE_OBJECT) // [!code --]
+G_DEFINE_TYPE_WITH_CODE( // [!code ++]
+    SampleString, sample_string, G_TYPE_OBJECT, // [!code ++]
+    G_IMPLEMENT_INTERFACE(SAMPLE_TYPE_ICOMPARABLE, // [!code ++]
+                          sample_icomparable_interface_init)) // [!code ++]
+
+// 实现 SampleIComparable 接口的 compare() 方法
+static void compare(SampleIComparable *this, SampleIComparable *item,
+                    gint *const restrict result) {
+    // 带检查的类型转换
+    SampleString *a = SAMPLE_STRING(this), *b = SAMPLE_STRING(item);
+    *result = a->length - b->length;
+}
+
+// 注册“虚函数”的实现
+static void sample_icomparable_interface_init(
+    SampleIComparableInterface *interface) {
+    interface->compare = compare;
+}
+```
+
+`G_DEFINE_TYPE_WITH_CODE:kwd`宏的前三个参数与`G_DEFINE_TYPE:kwd`宏的参数一致。第四个参数则是要实现的接口（可以实现多个接口，以空格为分隔）。如需为可派生类型实现接口，则需仿照下述代码：
+
+```c
+G_DEFINE_TYPE_WITH_CODE(SampleList, sample_list, G_TYPE_OBJECT,
+                        G_ADD_PRIVATE(SampleList) G_IMPLEMENT_INTERFACE(
+                            SAMPLE_TYPE_ICOMPARABLE,
+                            sample_icomparable_interface_init))
+```
+
+`G_IMPLEMENT_INTERFACE:kwd`宏和`G_ADD_PRIVATE:kwd`宏之间也需要使用空格分隔。`G_ADD_PRIVATE:kwd`宏的参数就是此类型的名称；`G_IMPLEMENT_INTERFACE:kwd`宏的参数分别为接口“代号”（`get_type():fun`方法的返回值）和接口实现函数。如果想为类型`A:typ`实现接口`B:typ`，而接口`B:typ`要求类型必须也实现接口`C:typ`，则使用`G_DEFINE_TYPE_WITH_CODE:kwd`宏时，必须首先声明要实现接口`C:typ`。
+
+官方文档里的接口实现方法的参数与接口声明的方法参数类型不一致，会导致 LLVM 静态代码检查和编译期报错，但在函数内可以使用 GObject 库提供的类型转换。一份完整的代码如下：
+
+```c [sample-icomparable.h]
+#ifndef __SAMPLE_I_COMPARABLE_H__
+#define __SAMPLE_I_COMPARABLE_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+#define SAMPLE_TYPE_ICOMPARABLE (sample_icomparable_get_type())
+
+G_DECLARE_INTERFACE(SampleIComparable, sample_icomparable, SAMPLE, ICOMPARABLE,
+                    GObject)
+
+struct _SampleIComparableInterface {
+    GTypeInterface parent_iface;
+
+    void (*compare)(SampleIComparable *this, SampleIComparable *item,
+                    gint *const restrict result);
+};
+
+void sample_icomparable_compare(SampleIComparable *this,
+                                SampleIComparable *item,
+                                gint *const restrict result);
+
+G_END_DECLS
+
+#endif  // __SAMPLE_I_COMPARABLE_H__
+```
+
+```c [sample-icomparable.c]
+#include "sample-icomparable.h"
+
+G_DEFINE_INTERFACE(SampleIComparable, sample_icomparable, G_TYPE_OBJECT)
+
+static void sample_icomparable_default_init(
+    SampleIComparableInterface *interface) {}
+
+void sample_icomparable_compare(SampleIComparable *this,
+                                SampleIComparable *item,
+                                gint *const restrict result) {
+    SampleIComparableInterface *interface = NULL;
+
+    g_return_if_fail(SAMPLE_IS_ICOMPARABLE(this));
+    g_return_if_fail(result != NULL);
+
+    interface = SAMPLE_ICOMPARABLE_GET_IFACE(this);
+    g_return_if_fail(interface->compare != NULL);
+    interface->compare(this, item, result);
+}
+```
+
+```c [sample-string.h]
+#ifndef __SAMPLE_STRING_H__
+#define __SAMPLE_STRING_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+#define SAMPLE_TYPE_STRING (sample_string_get_type())
+
+G_DECLARE_FINAL_TYPE(SampleString, sample_string, SAMPLE, STRING, GObject)
+
+SampleString *sample_string_new(gsize capacity);
+
+SampleString *sample_string_new_with_text(const gchar *const restrict text,
+                                          gsize capacity);
+
+void sample_string_compare(SampleString *this, SampleString *item,
+                           gint *const restrict result);
+
+G_END_DECLS
+
+#endif  // __SAMPLE_STRING_H__
+```
+
+```c [sample-string.c]
+#include "sample-string.h"
+
+#include "sample-icomparable.h"
+
+enum {
+    SAMPLE_STRING_TEXT = 1,
+    SAMPLE_STRING_LENGTH = 2,
+    SAMPLE_STRING_CAPACITY = 3,
+};
+
+struct _SampleString {
+    GObject parent_instance;
+
+    gchar *array;
+    gsize length;
+    gsize capacity;
+};
+
+static void sample_icomparable_interface_init(
+    SampleIComparableInterface *interface);
+
+G_DEFINE_TYPE_WITH_CODE(
+    SampleString, sample_string, G_TYPE_OBJECT,
+    G_IMPLEMENT_INTERFACE(SAMPLE_TYPE_ICOMPARABLE,
+                          sample_icomparable_interface_init))
+
+// 注意参数类型
+static void compare(SampleIComparable *this, SampleIComparable *item, // [!code highlight]
+                    gint *const restrict result) {
+    SampleString *a = SAMPLE_STRING(this), *b = SAMPLE_STRING(item);
+    *result = a->length - b->length;
+}
+
+static void sample_icomparable_interface_init(
+    SampleIComparableInterface *interface) {
+    interface->compare = compare;
+}
+
+static void sample_string_set_property(GObject *object, guint property_id,
+                                       const GValue *value, GParamSpec *pspec) {
+    SampleString *this = SAMPLE_STRING(object);
+    switch (property_id) {
+        case SAMPLE_STRING_TEXT: {
+            gchar *temp = g_value_dup_string(value);
+            if (strlen(temp) > this->capacity) {
+                this->capacity = strlen(temp);
+                this->array = g_realloc(this->array, this->capacity);
+            }
+            memcpy(this->array, temp, this->capacity);
+            g_free(temp);
+            this->length = strlen(temp);
+            break;
+        }
+        case SAMPLE_STRING_CAPACITY: {
+            this->capacity = g_value_get_uint64(value);
+            break;
+        }
+        default: {
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            break;
+        }
+    }
+    g_print("sample_string_set_property() finished.\n");
+}
+
+static void sample_string_get_property(GObject *object, guint property_id,
+                                       GValue *value, GParamSpec *pspec) {
+    SampleString *this = SAMPLE_STRING(object);
+    switch (property_id) {
+        case SAMPLE_STRING_TEXT: {
+            g_value_set_string(value, this->array);
+            break;
+        }
+        case SAMPLE_STRING_LENGTH: {
+            g_value_set_uint64(value, this->length);
+            break;
+        }
+        case SAMPLE_STRING_CAPACITY: {
+            g_value_set_uint64(value, this->capacity);
+            break;
+        }
+        default: {
+            G_OBJECT_WARN_INVALID_PROPERTY_ID(object, property_id, pspec);
+            break;
+        }
+    }
+    g_print("sample_string_get_property() finished.\n");
+}
+
+static void sample_string_dispose(GObject *object) {
+    G_OBJECT_CLASS(sample_string_parent_class)->dispose(object);
+    g_print("sample_string_dispose() finished.\n");
+}
+
+static void sample_string_finalize(GObject *object) {
+    SampleString *this = SAMPLE_STRING(object);
+    g_free(this->array);
+    G_OBJECT_CLASS(sample_string_parent_class)->finalize(object);
+    g_print("sample_string_finalize() finished.\n");
+}
+
+static void sample_string_init(SampleString *this) {
+    g_print("sample_string_init() finished.\n");
+}
+
+static void sample_string_constructed(GObject *object) {
+    SampleString *this = SAMPLE_STRING(object);
+
+    this->array = g_new(gchar, this->capacity);
+}
+
+static void sample_string_class_init(SampleStringClass *class) {
+    GObjectClass *object_class = G_OBJECT_CLASS(class);
+    GParamSpec *temp = NULL;
+
+    object_class->constructed = sample_string_constructed;
+    object_class->set_property = sample_string_set_property;
+    object_class->get_property = sample_string_get_property;
+    object_class->dispose = sample_string_dispose;
+    object_class->finalize = sample_string_finalize;
+
+    temp = g_param_spec_string("text", "Text", "Text stored inside the struct.",
+                               NULL, G_PARAM_READWRITE);
+    g_object_class_install_property(object_class, SAMPLE_STRING_TEXT, temp);
+    temp = g_param_spec_uint64("length", "Length", "Text length.", 0,
+                               G_MAXUINT64, 0, G_PARAM_READABLE);
+    g_object_class_install_property(object_class, SAMPLE_STRING_LENGTH, temp);
+    temp = g_param_spec_uint64("capacity", "Capacity", "Text capacity.", 0,
+                               G_MAXUINT64, 0,
+                               G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+    g_object_class_install_property(object_class, SAMPLE_STRING_CAPACITY, temp);
+
+    g_print("sample_string_class_init() finished.\n");
+}
+
+SampleString *sample_string_new(gsize capacity) {
+    SampleString *this =
+        g_object_new(SAMPLE_TYPE_STRING, "capacity", capacity, NULL);
+    return this;
+}
+
+SampleString *sample_string_new_with_text(const gchar *const restrict text,
+                                          gsize capacity) {
+    GValue value = G_VALUE_INIT;
+    SampleString *this =
+        g_object_new(SAMPLE_TYPE_STRING, "capacity", capacity, NULL);
+    g_value_init(&value, G_TYPE_STRING);
+    g_value_set_string(&value, text);
+    g_object_set_property(G_OBJECT(this), "text", &value);
+    return this;
+}
+
+void sample_string_compare(SampleString *this, SampleString *item,
+                           gint *const restrict result) {
+    SampleIComparable *a = NULL, *b = NULL;
+
+    g_return_if_fail(result != NULL);
+
+    a = SAMPLE_ICOMPARABLE(this);
+    b = SAMPLE_ICOMPARABLE(item);
+    compare(a, b, result);
+}
+```
+
+```c [main.c]
+#include <glib-object.h>
+
+#include "sample-icomparable.h"
+#include "sample-string.h"
+
+int main() {
+    gint result = 0;
+    SampleString *a = sample_string_new_with_text("1145141919810", 20),
+                 *b = sample_string_new_with_text("1919810", 20);
+
+    // 注意，调用的不是 SampleString 类的成员函数
+    sample_icomparable_compare(SAMPLE_ICOMPARABLE(a), SAMPLE_ICOMPARABLE(b),
+                               &result);
+
+    g_print("result = %d\n", result);
+}
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+sample_string_class_init() finished.
+sample_string_init() finished.
+sample_string_set_property() finished.
+sample_string_set_property() finished.
+sample_string_init() finished.
+sample_string_set_property() finished.
+sample_string_set_property() finished.
+result = 6
+```
+
+GObject 库允许接口拥有属性，但接口只声明不实现。
+
+```c
+static void sample_icomparable_default_init(
+    SampleIComparableInterface *interface) {
+
+    // 注意函数名
+    g_object_interface_install_property(
+        interface,
+        g_param_spec_int("last-result", "Last Result", "Last comparison result",
+                         G_MININT32, G_MAXINT32, 0, G_PARAM_READABLE));
+
+}
+```
+
+在接口内声明属性时不需要 ID，ID 需要等到具体的类实现时才分配。属性的 ID 一般由`GObject:typ`类声明的`get_property():fun`和`set_property():fun`虚函数使用。在具体实现接口声明的属性时，应当调用`g_object_class_override_property():fun`函数。
+
+```c
+enum {
+    SAMPLE_STRING_TEXT = 1,
+    SAMPLE_STRING_LENGTH = 2,
+    SAMPLE_STRING_CAPACITY = 3,
+    SAMPLE_STRING_LAST_RESULT = 4
+};
+
+/// 省略部分代码 ······
+
+static void sample_string_class_init(SampleStringClass *class) {
+    GObjectClass *object_class = G_OBJECT_CLASS(class);
+    GParamSpec *temp = NULL;
+
+    // 此处省略了 set_property() 和 get_property() 方法的具体实现
+    object_class->set_property = sample_string_set_property;
+    object_class->get_property = sample_string_get_property;
+
+    /// 省略部分代码 ······
+
+    g_object_class_override_property(object_class, SAMPLE_STRING_LAST_RESULT,
+                                     "last-result");
+}
+```
+
+若子类需要重写父类的方法，而父类实现了某个接口，需重写的方法恰好就是此接口声明的方法（之一），则子类也需按照实现接口的流程再次实现此接口。不过，不需要实现所有接口声明的方法，仅重写需要的方法即可。**记得要在重写方法内调用被重写的父类方法**，具体实现可以参考[官方文档](https://docs.gtk.org/gobject/tutorial.html#overriding-interface-methods "点击跳转")。
+
+### 5. 深入类型系统
+
+这一节主要**部分**介绍官方文档中的[Type System Concepts](https://docs.gtk.org/gobject/concepts.html "点击跳转")一文。GObject 库是为了提供基础面向对象特性、基础数据结构与算法而存在，并且此库会优先考虑与其它编程语言的互操作性（即可以相互调用），因此有时 API 实现会相对麻烦复杂。
+
+C 语言可以编译为动态链接库以导出函数或全局变量等，其它语言可以通过此动态链接库调用导出的函数，其大致过程如下：
+
+1. 根据符号表查找函数位置。
+2. 将函数的代码加载到可执行内存中。
+3. 将参数类型从其它语言的类型转换为 C 语言可接受类型。
+4. 使用正确参数调用函数。
+5. 将函数返回值从 C 语言的类型转换为其它语言可接受类型。
+
+GObject 库为部分解释型语言（例如 Perl、Python 和 JavaScript 等）提供了自动转换类型的胶水代码。
+
+#### (1) “动态类型”
+
+GObject 库内有一个`GValue:typ`类，该类的实例可以将任意类型的值存储于其中。其基本使用方法如下：
+
+```c [main.c]
+SampleString *str = g_object_new(SAMPLE_TYPE_STRING, NULL);
+
+// 初始化
+GValue a = G_VALUE_INIT, b = G_VALUE_INIT;
+g_value_init(&a, SAMPLE_TYPE_STRING);   // 第二个参数填“类型代号”，可以是自定义类型
+g_value_init(&b, SAMPLE_TYPE_STRING);
+
+g_value_set_object(&a, str);            // 根据类型调用 set_<类型>() 方法
+g_value_copy(&a, &b);                   // 拷贝 // [!code highlight]
+str = g_value_get_object(&b);           // 取出拷贝值
+
+// 减少三次引用计数
+g_object_unref(str);
+g_object_unref(str);
+g_object_unref(str);
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+sample_string_class_init() finished.
+sample_string_init() finished.
+sample_string_set_property() finished.
+sample_string_dispose() finished.
+sample_string_finalize() finished.
+```
+
+上述代码中，对同一实例调用了三次`g_object_unref():fun`函数，运行程序没有报错且实例被正常释放。这是因为上述代码两次创建了对实例的引用，第一次是调用`g_value_copy():fun`函数，第二次是调用`g_value_get_object():fun`函数。在默认情况况下，对于基础类型（例如`gint:typ`和`gsize:typ`），拷贝时会使用值拷贝；而继承自`GObject:typ`类的类型，拷贝时则会选择引用。
+
+程序员可以控制拷贝时是选择值拷贝还是引用（但不常用）。在注册新的类型时，GObject 库提供的宏会自动生成此类型相关的信息。其中一个关键的结构体是`GTypeInfo:typ`，其源代码如下：
+
+```c
+typedef struct _GTypeInfo GTypeInfo;
+
+/// 省略部分代码 ······
+
+struct _GTypeInfo
+{
+    guint16                class_size;      // 类型大小
+    GBaseInitFunc          base_init;       // 构造函数
+    GBaseFinalizeFunc      base_finalize;   // 析构函数
+
+    GClassInitFunc         class_init;      // 构造函数
+    GClassFinalizeFunc     class_finalize;  // 析构函数
+    gconstpointer          class_data;
+
+    guint16                instance_size;   // 实例大小
+    guint16                n_preallocs;     // 初始化策略
+    GInstanceInitFunc      instance_init;
+
+    const GTypeValueTable    *value_table; // [!code highlight]
+};
+```
+
+在`value_table:var`字段内，保存着有关此类型在`GValue:typ`实例中发生拷贝时该如何处理的函数。`GTypeValueTable:typ`结构体的源代码如下：
+
+```c
+typedef struct _GTypeValueTable GTypeValueTable;
+
+/// 省略部分代码 ······
+
+struct _GTypeValueTable
+{
+    GTypeValueInitFunc value_init;
+    GTypeValueFreeFunc value_free;
+    GTypeValueCopyFunc value_copy;
+    GTypeValuePeekPointerFunc value_peek_pointer;
+
+    const gchar *collect_format;
+    GTypeValueCollectFunc collect_value;
+
+    const gchar *lcopy_format;
+    GTypeValueLCopyFunc lcopy_value;
+};
+```
+
+关于如何自定义拷贝方式本文不做叙述。
+
+#### (2) 命名约定
+
+以下内容由个人不完全译自官方文档：
+
+- 类型名必须至少有 3 个字符，且必须以字母或下划线开头。
+- 函数名称应形如`object_method()`。
+- 使用前缀（指命名空间）以避免命名空间与其它项目冲突。
+- 前缀（指命名空间）应该是一个短语，除了首字母大写以外全部使用小写。
+- 类名（不含命名空间前缀）可以由多个短语组成。
+- 请定义形如`<NAMESPACE>_TYPE_<CLASS>`模式的宏，它的返回值应该是与之关联的类型的“类型代号”（类型为`GType:typ`），例如上文代码中的`SAMPLE_TYPE_STRING:kwd`宏。
+- 形如`<NAMESPACE>_<CLASS>()`的函数用于带检查的显式类型转换，例如上文代码中的`SAMPLE_STRING():fun`函数。
+- 形如`<NAMESPACE>_<CLASS>_CLASS()`的函数也用于带检查的类型转换，只不过是转换为保存类信息的结构体类型，例如`G_OBJECT_CLASS():fun`宏函数。
+- 形如`<NAMESPACE>_IS_<CLASS>()`的函数用于判断给定的实例是否属于此类型，例如上文代码中的`SAMPLE_IS_LIST():fun`函数。
+- 形如`<NAMESPACE>_IS_<CLASS>_CLASS()`的函数用于判断给定的实例是否属于存储此类型的结构体类型。
+- 形如`<NAMESPACE>_<CLASS>_GET_CLASS()`的函数用于根据给定实例，返回存储其类型信息的结构体实例，例如上文代码中的`SAMPLE_LIST_GET_CLASS():fun`函数。
+
+#### (3) 类型识别
+
+一般的自定义类型都是在运行时才向类型系统注册成为“类型”。其实现原理是：初始化一个实例需要使用`g_object_new():fun`宏函数，而此宏函数需要`GType:typ`类型的参数，此参数通过`get_type():fun`成员方法返回，类型注册就发生在此方法内。
+
+```c [sample-object.h]
+typedef struct {
+    GObject parent_instance;
+
+    // 成员变量 ······
+
+} SampleObject;
+
+typedef struct {
+    GObjectClass parent_class;
+
+    // 虚函数 ······
+
+} SampleObjectClass;
+
+#define SAMPLE_TYPE_OBJECT (sample_object_get_type())
+
+GType sample_object_get_type();
+```
+
+```c [sample-object.c]
+static void init(SampleObject *this) {
+
+    // 实例初始化 ······
+
+}
+
+static void class_init(SampleObjectClass *class) {
+
+    // 存储类型信息的结构体实例初始化 ······
+
+}
+
+GType sample_object_get_type() {
+    static GType type = 0;  // 静态变量 // [!code highlight]
+    if (type == 0) {
+        const GTypeInfo info = {sizeof(SampleObjectClass),
+                                NULL,
+                                NULL,
+                                (GClassInitFunc)class_init,
+                                NULL,
+                                NULL,
+                                sizeof(SampleObject),
+                                0,
+                                (GInstanceInitFunc)init,
+                                NULL};
+
+        // 注册类型
+        type = g_type_register_static(G_TYPE_OBJECT, "SampleObject", &info, 0);
+    }
+    return type;
+}
+```
+
+类型本身和存储类型的结构体的第一个成员变量总是父类实例，这是为了 GObject 库的类型系统能够识别某个实例究竟属于哪个类。最顶级的类（即没有父类的类，`GObject:typ`）的第一个成员变量是`GTypeInstance *:typ`类型，`GTypeInstance:typ`类型有一个成员变量是`GTypeClass*:typ`类型，`GTypeClass:typ`类型有一个成员变量是`GType:typ`类型。
+
+```c
+typedef struct _GTypeInstance GTypeInstance;
+struct _GTypeInstance
+{
+    /*< private >*/
+    GTypeClass *g_class;
+};
+
+typedef struct _GTypeClass GTypeClass;
+struct _GTypeClass
+{
+    /*< private >*/
+    GType g_type;
+};
+```
+
+GObject 库巧妙地利用“结构体实例第一个成员存放在其起始地址”这一特性，避开了结构体内存对齐等问题，实现了能获取任意实例类型的功能：
+
+```c [main.c]
+SampleString *str = g_object_new(SAMPLE_TYPE_STRING, NULL);
+GTypeInstance *instance = (GTypeInstance *)str; // 显式类型转换 // [!code highlight]
+
+g_print("instance->g_class->g_type == SAMPLE_TYPE_STRING is %d\n",
+        instance->g_class->g_type == SAMPLE_TYPE_STRING);
+
+g_object_unref(str);
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+sample_string_class_init() finished.
+sample_string_init() finished.
+sample_string_set_property() finished.
+instance->g_class->g_type == SAMPLE_TYPE_STRING is 1
+sample_string_dispose() finished.
+sample_string_finalize() finished.
+```
+
+对于保存类型信息的结构体，上述过程也大同小异，此处不作赘述。
+
+#### (4) 构造与析构
+
+类型系统在构造实例时，会使用注册类型时提供的`GTypeInfo:typ`实例。
+
+```c
+typedef struct _GTypeInfo GTypeInfo;
+struct _GTypeInfo
+{
+    guint16                class_size;      // 类型大小
+    GBaseInitFunc          base_init;       // 构造函数
+    GBaseFinalizeFunc      base_finalize;   // 析构函数
+
+    GClassInitFunc         class_init;      // 构造函数
+    GClassFinalizeFunc     class_finalize;  // 析构函数
+    gconstpointer          class_data;
+
+    guint16                instance_size;   // 实例大小
+    guint16                n_preallocs;     // 初始化策略
+    GInstanceInitFunc      instance_init;
+
+    const GTypeValueTable    *value_table;
+};
+```
+
+除了`g_object_new():fun`宏函数以外，还可以使用`g_type_create_instance():fun`函数来初始化一个类型的实例（下称实例）。但后者仅仅只做最基础的内存分配与初始化，因此不推荐用于自定义基础类型以外的用途。在使用`g_object_new():fun`宏函数构造实例时，会首先调用`g_type_create_instance():fun`函数分配空间。
+
+如果这是第一次为此类型创建实例，则类型系统必须首先创建一个存储此类型信息的结构体（下称类型信息）。该类型信息的第一个字段`parent_class:var`会通过从父类拷贝的方式初始化，其余部分则初始为 0。如果没有父类，则整个类型信息所占空间都将初始化为 0。紧接着，`GTypeInfo:typ`实例的`base_init:var`字段指向的函数会被调用（如果不为`NULL:kwd`），自顶向下初始化类型信息。之后，`class_init:var`字段指向的函数会被调用，完成类型信息的初始化。然后，实例实现的接口会被初始化。
+
+当类型信息初始化完毕后，实例的`g_class:var`字段会指向此类型信息，并调用`GTypeInfo:typ`实例的`instance_init:var`字段指向的函数，自顶向下依次初始化实例。至此，实例构造完毕。
+
+类型信息的析构过程与构造过程基本对称。实例实现的接口首先被析构，接着自底向上依次调用`GTypeInfo:typ`实例的`class_finalize:var`字段指向的函数以析构类型信息。最终，`base_finalize:var`字段指向的函数会被调用，以完成整个类型信息的析构。
+
+#### (5) 接口
+
+接口不可被实例化，但实例需要保存接口信息的结构体实例（下称接口信息）。在注册类型时，类型实现的接口信息也会被一并注册：
+
+```c
+GType sample_object_get_type() {
+    static GType type = 0;
+    if (type == 0) {
+        const GTypeInfo info = {sizeof(SampleObjectClass),
+                                NULL,
+                                NULL,
+                                (GClassInitFunc)class_init,
+                                NULL,
+                                NULL,
+                                sizeof(SampleObject),
+                                0,
+                                (GInstanceInitFunc)init,
+                                NULL};
+        type = g_type_register_static(G_TYPE_OBJECT, "SampleObject", &info, 0);
+
+        // 接口注册
+        const GInterfaceInfo icomparable_info = {
+            (GInterfaceInitFunc)interface_init,
+            NULL,
+            NULL,
+        };
+        g_type_add_interface_static(type, SAMPLE_TYPE_OBJECT,
+                                    &icomparable_info);
+    }
+    return type;
+}
+```
+
+其中，`GInterfaceInfo:typ`类型的定义如下：
+
+```c
+typedef struct _GInterfaceInfo GInterfaceInfo;
+struct _GInterfaceInfo
+{
+    GInterfaceInitFunc     interface_init;
+    GInterfaceFinalizeFunc interface_finalize;
+    gpointer               interface_data;
+};
+```
+
+当一个实现了接口的（直接实现或从父类继承）、可实例化的类型实例化时，会初始化被实现的接口信息。首先是分配足够容纳接口信息的内存，接着父类的接口信息会被拷贝至此接口信息内。如果没有父类，则整个接口信息所占空间都将被初始化为 0。然后，`parent_iface:var`字段会被初始化。该字段类型为`GTypeInterface:typ`，其定义如下：
+
+```c
+typedef struct _GTypeInterface GTypeInterface;
+struct _GTypeInterface
+{
+    /*< private >*/
+    GType g_type;         /* iface type */
+    GType g_instance_type;
+};
+```
+
+其中，`g_type:var`字段被初始化为接口的“类型代号”，`g_instance_type:var`字段被初始化为最下层的实现了此接口的类型的“类型代号”。
+
+接口在定义时，同样也需要使用`GTypeInfo:typ`结构体。在宏定义中，`class_init:var`字段将被指向`default_init():fun`方法。在接口信息初始化后，`GTypeInfo:typ`实例的`base_init:var`字段指向的函数将被调用。紧接着，`class_init:var`字段指向的函数将被调用。然后，`GInterfaceInfo:typ`实例的`interface_init:var`字段指向的函数将被调用。如果有多个实现接口的类型，那么`base_init:var`和`interface_init:var`会在每个类型首次实例化时被调用。
+
+当可实例化且实现了此接口的类型的最后一个实例被析构时，接口信息也将被“析构”。首先，`GInterfaceInfo:typ`实例的`interface_finalize:var`字段指向的函数将被调用，然后自底向上调用`GTypeInfo:typ`实例的`base_finalize:var`字段指向的函数。这两个函数对每个实现此接口的类型都会调用一次。
+
+### 6. 信号
+
+GObject 库内提供了复杂但可扩展性高的信号系统（或者叫同步回调，与类 Unix 系统的信号无关）。一个极简例子如下：
+
+```c [sample-object.h]
+#ifndef __SAMPLE_OBJECT_H__
+#define __SAMPLE_OBJECT_H__
+
+#include <glib-object.h>
+
+G_BEGIN_DECLS
+
+#define SAMPLE_TYPE_OBJECT (sample_object_get_type())
+G_DECLARE_DERIVABLE_TYPE(SampleObject, sample_object, SAMPLE, OBJECT, GObject)
+
+struct _SampleObjectClass {
+    GObjectClass parent_class;
+};
+
+void sample_object_do_something(SampleObject *this);
+
+G_END_DECLS
+
+#endif  // __SAMPLE_OBJECT_H__
+```
+
+```c [sample-object.c]
+#include "sample-object.h"
+
+G_DEFINE_TYPE(SampleObject, sample_object, G_TYPE_OBJECT)
+
+// 信号枚举
+enum {
+    SIGNAL_BEFORE_DO_SOMETHING = 0,
+    SIGNAL_AFTER_DO_SOMETHING,
+    SIGNAL_QUANTITY
+};
+
+// 保存信号值
+static guint signals[SIGNAL_QUANTITY] = {0};
+
+static void sample_object_init(SampleObject *this) {}
+
+static void sample_object_class_init(SampleObjectClass *class) {
+    // 注册信号
+    signals[SIGNAL_BEFORE_DO_SOMETHING] = g_signal_newv(
+        "before-do-something", G_TYPE_FROM_CLASS(class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, NULL, NULL,
+        NULL, NULL, G_TYPE_NONE, 0, NULL);
+
+    signals[SIGNAL_AFTER_DO_SOMETHING] = g_signal_newv(
+        "after-do-something", G_TYPE_FROM_CLASS(class),
+        G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, NULL, NULL,
+        NULL, NULL, G_TYPE_NONE, 0, NULL);
+}
+
+void sample_object_do_something(SampleObject *this) {
+    // 触发信号
+    g_signal_emit(this, signals[SIGNAL_BEFORE_DO_SOMETHING], 0);
+
+    g_print("doing something\n");
+
+    g_signal_emit(this, signals[SIGNAL_AFTER_DO_SOMETHING], 0);
+}
+```
+
+```c [main.c]
+#include <glib-object.h>
+
+#include "sample-object.h"
+
+static void before() { g_print("before doing something\n"); }
+
+static void after() { g_print("after something done\n"); }
+
+int main() {
+    SampleObject *object = g_object_new(SAMPLE_TYPE_OBJECT, NULL);
+
+    // 设置信号触发时的回调函数
+    g_signal_connect(object, "before-do-something", G_CALLBACK(before), NULL);
+    g_signal_connect(object, "after-do-something", G_CALLBACK(after), NULL);
+
+    sample_object_do_something(object);
+
+    g_object_unref(object);
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+before doing something
+doing something
+after something done
+```
+
+若父类定义了某种信号，则子类也可以使用。
+
+#### (1) 闭包
+
+GObject 定义的闭包包含三个部分：
+
+- 回调函数的指针
+- 指向函数调用时要传入的参数的指针
+- 当闭包引用计数归 0 时触发的析构函数的指针
+
+GObject 库提供了两种不同的类型：`GClosure:typ`类型和`GCClosure:typ`类型。这两种类型都**不是**`GObject:typ`的子类。前者仅包含了闭包所需的基本功能，后者则是 GObject 库提供的一种闭包实现。一般情况下，与信号相关的回调函数要么使用`GCClosure:typ`类型，要么使用`g_signal_connect():fun`宏函数。
+
+创建`GCClosure:typ`类型的实例一般使用`g_cclosure_new():fun`函数或`g_cclosure_new_object():fun`函数。
+
+```c
+// 注意类型名仍然是 GClosure
+// 参数分别为：回调函数、回调函数的最后一个参数、闭包被释放时触发的函数
+GClosure *a = g_cclosure_new(G_CALLBACK(test), NULL, NULL);
+
+// 将 GCClosure 与指定的 GObject 实例绑定
+GObject *object = g_object_new(G_TYPE_OBJECT, NULL);
+GClosure *b = g_cclosure_new_object(G_CALLBACK(test), object);
+```
+
+注意，上述代码中闭包的“构造函数”返回的指针**不应**被手动释放。`g_cclosure_new():fun`函数的第三个参数类型为`ClosureNotify:typ`，该类型是一种函数指针。在闭包被释放前此函数会被调用，一般用于释放第二个参数（指针）。若使用`g_cclosure_new_object():fun`函数，则当`object:var`实例被释放时，闭包`b:var`将不再可用。
+
+#### (2) 信号注册
+
+上文代码中注册信号时使用的函数为`g_signal_newv():fun`，该函数的声明如下：
+
+```c
+guint g_signal_newv(
+    // 信号名，必须唯一且仅由字母、数字、下划线或减号构成
+    const gchar *signal_name,
+    // 能够触发信号的类型的“代号”
+    GType itype,
+    // 信号标志
+    GSignalFlags signal_flags,
+    // 默认闭包，不论有没有额外注册闭包，它总是会被调用
+    GClosure *class_closure,
+    // （函数指针）闭包累加器，每个闭包执行结束后调用
+    GSignalAccumulator accumulator,
+    // 传递给闭包累加器的参数
+    gpointer accu_data,
+    // 类型转换器
+    GSignalCMarshaller c_marshaller,
+    // 回调函数返回值
+    GType return_type,
+    // 回调函数参数个数
+    guint n_params,
+    // 各个参数的“类型代号”
+    GType *param_types);
+```
+
+其中，信号标志`signal_flags:var`将在信号触发一节涉及。参数`c_marshaller:var`用于对回调函数的参数与返回值做类型转换，主要在与其它编程语言交互时会使用，一般默认填`NULL:kwd`即可。
+
+#### (3) 闭包注册
+
+闭包注册至信号有四种方式：
+
+- 使用`g_signal_connect():fun`一类的函数。通过这种方式注册的闭包仅对特定实例生效。
+- 在注册信号时使用默认闭包。这种方式对所有此类及其派生类的任意实例都生效。
+- 在派生类中重写父类信号的默认闭包。这种情况一般会使用`g_signal_override_class_closure():fun`函数，并需要在闭包的回调函数内链式调用父类的闭包。
+- 注册为 Hook。使用`g_signal_add_emission_hook():fun`函数可以将函数注册为闭包，在指定信号触发时会调用闭包（不论是什么类型或实例）。
+
+如果信号在注册时使用了`G_SIGNAL_NO_HOOKS:kwd`标志，则不能对此信号添加 Hook。上述函数的具体参数请参考官方文档，此处不做详述。
+
+#### (4) 信号触发
+
+在上述代码中，触发信号时使用的函数为`g_signal_emit():fun`，该函数简单但缺少部分功能。`g_signal_emitv():fun`函数提供的功能要更加全面，其声明如下：
+
+```c
+void g_signal_emitv(
+    // 回调函数的参数列表
+    // 回调函数第一个参数一般是触发信号的实例，然后才是此参数列表
+    const GValue *instance_and_params,
+    // 要触发的信号 ID
+    guint signal_id,
+    // 信息
+    GQuark detail,
+    // 如果没有累加器，则此值为最后一个闭包的返回值
+    // 否则为所有闭包返回值通过累加器“累加”后的结果
+    GValue *return_value);
+```
+
+其中，`detail:var`参数将在 detail 参数一节详述。信号触发时，闭包调用分为 6 个阶段：
+
+1. 如果信号注册时使用了`G_SIGNAL_RUN_FIRST:kwd`标志，调用默认闭包。
+2. 按照添加顺序，依次调用信号触发的 Hook。
+3. 按照注册顺序，依次调用通过`g_signal_connect():fun`一类的函数注册的闭包。如果某个闭包被`g_signal_handler_block():fun`一类的函数阻塞，则该闭包不会被调用。
+4. 如果信号注册时使用了`G_SIGNAL_RUN_LAST:kwd`优先级标志，调用默认闭包。
+5. 按照注册顺序，依次调用通过`g_signal_connect_after():fun`一类的函数注册的闭包。如果某闭包已在第 3 阶段调用过或被阻塞，则该闭包不会被调用。
+6. 如果信号注册时使用了`G_SIGNAL_RUN_CLEANUP:kwd`标志，调用默认闭包。
+
+如果在 1、3、4、5 阶段，有闭包调用了`g_signal_stop_emission():fun`函数，则会跳转至第 6 阶段。在任意阶段，有闭包或 Hook 再次触发了相同信号，则会再次从第 1 阶段开始触发信号。累加器函数在所有闭包执行后都会执行一次（除了第 6 阶段）。
+
+#### (5) `detail:var`参数
+
+`detail:var`参数一般是用于细分信号。一个信号可能携带多种信息，例如键盘按下时间会有按键代码、是否使用 Alt/Shift/Ctrl 等，此时就可以使用`detail:var`参数来确定要获取什么具体信息。如果在触发信号时`detail:var`参数非空，则所有`detail:var`不匹配的闭包都不会被调用。
+
+```c [sample-object.c]
+static void sample_object_class_init(SampleObjectClass *class) {
+    signals[SIGNAL_BEFORE_DO_SOMETHING] = g_signal_newv(
+        "before-do-something", G_TYPE_FROM_CLASS(class), G_SIGNAL_RUN_LAST,
+        NULL, NULL, NULL, NULL, G_TYPE_NONE, 0, NULL);
+
+    // 注意，要使用信号，注册时必须使用 G_SIGNAL_DETAILED 标志
+    signals[SIGNAL_AFTER_DO_SOMETHING] =
+        g_signal_newv("after-do-something", G_TYPE_FROM_CLASS(class),
+                      G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED, NULL, NULL, NULL,
+                      NULL, G_TYPE_NONE, 0, NULL);
+}
+
+void sample_object_do_something(SampleObject *this) {
+    g_signal_emit(this, signals[SIGNAL_BEFORE_DO_SOMETHING], 0);
+
+    g_print("doing something\n");
+
+    // 搜索带 filter 的闭包
+    g_signal_emit(this, signals[SIGNAL_AFTER_DO_SOMETHING],
+                  g_quark_from_static_string("filter"));
+}
+```
+
+```c [main.c]
+static void before() { g_print("before doing something\n"); }
+
+static void after() { g_print("after something done\n"); }
+
+static void after_filter() { g_print("(filter)after something done\n"); }
+
+static void after_test() { g_print("(test)after something done\n"); }
+
+int main() {
+    SampleObject *object = g_object_new(SAMPLE_TYPE_OBJECT, NULL);
+
+    // 无 detail，正常触发
+    g_signal_connect(object, "after-do-something", G_CALLBACK(after), NULL);
+    g_signal_connect(object, "after-do-something::filter",
+                     G_CALLBACK(after_filter), NULL);
+    // 此回调函数不会被调用，因为其 detail 错误
+    g_signal_connect(object, "after-do-something::test", G_CALLBACK(after_test),
+                     NULL);
+
+    sample_object_do_something(object);
+
+    g_object_unref(object);
+    return 0;
+}
+```
+
+```c [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+doing something
+after something done
+(filter)after something done
+```
+
+#### (6) 取消注册闭包
+
+在注册闭包时，注册使用的函数往往会有一个类型为`gpointer:typ`类型的参数，该参数在信号触发时会被传入对应的回调函数中。如果此参数为`GObject:typ`实例，则必须在此参数被释放前调用`g_signal_handler_disconnect():fun`一类的函数。虽然在触发信号的实例被回收时，闭包也会自动回收，但是当作为参数的实例被释放时闭包不会自动取消注册。如果在作为参数的实例被释放后触发了信号，则程序会报错。
+
+```c
+g_signal_connect(object, "after-do-something::filter",
+                    G_CALLBACK(after_filter), NULL);
+
+// 取消注册闭包
+g_signal_handler_disconnect(
+    object, g_signal_handler_find(object, G_SIGNAL_MATCH_FUNC,
+                                    SIGNAL_AFTER_DO_SOMETHING, 0, NULL,
+                                    G_CALLBACK(after_filter), NULL));
+```
+
+函数参数的详细解释请参考官方文档。
+
+## 三、输入输出
+
+各个平台的文件系统各不相同，Gio 库提供了方便使用的虚拟文件系统 API。相比 POSIX 标准，Gio 要更加上层、抽象。Gio 库可以用于文件流、网络流与 DBus。此外，Gio 库还提供了文件监控、异步 I/O 等工具。本文只简要记录文件流、网络流与异步的基础使用方法。
+
+```c [main.c]
+gchar *buffer = g_new(gchar, 4096);
+GFile *file = g_file_new_for_path("../src/main.c");
+GFileInputStream *stream = g_file_read(file, NULL, NULL);
+g_object_unref(file);
+
+while (g_input_stream_read(G_INPUT_STREAM(stream), buffer, 4096, NULL,
+                           NULL) > 0) {
+    g_print("%s", buffer);
+    memset(buffer, 0, sizeof(gchar) * 4096);
+}
+
+g_input_stream_close(G_INPUT_STREAM(stream), NULL, NULL);
+g_free(buffer);
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+#include <gio/gio.h>
+
+int main() {
+    gchar *buffer = g_new(gchar, 4096);
+    GFile *file = g_file_new_for_path("../src/main.c");
+    GFileInputStream *stream = g_file_read(file, NULL, NULL);
+    g_object_unref(file);
+
+    while (g_input_stream_read(G_INPUT_STREAM(stream), buffer, 4096, NULL,
+                               NULL) > 0) {
+        g_print("%s", buffer);
+        memset(buffer, 0, sizeof(gchar) * 4096);
+    }
+
+    g_input_stream_close(G_INPUT_STREAM(stream), NULL, NULL);
+    g_free(buffer);
+
+    return 0;
+}
+```
+
+上述代码实现了简单的文件读取。
+
+### 1. 输入流与输出流
+
+在 POSIX 标准下，可输入/可输出对象均被抽象成了文件，通过文件描述符来对其进行操作，例如套接字。与文件描述符对应的 Gio 类型是`GInputStream:typ`抽象类和`GOutputStream:typ`抽象类。有关读取/输出的方法都写在了这两个类下，因此即便获取了其派生类，也必须类型转换至这些抽象类型才能进行读/写操作。
+
+#### (1) `GInputStream:typ`
+
+`GInputStream:typ`抽象类声明的**同步**方法如下：
+
+|       方法名       |                作用                |
+| :----------------: | :--------------------------------: |
+|   `close():fun`    |             关闭输入流             |
+|    `read():fun`    |    读取指定字符数至指定的缓冲区    |
+|  `read_all():fun`  |  读取尽可能多的字符至指定的缓冲区  |
+| `read_bytes():fun` | 读取指定字符数至新建缓冲区并返回之 |
+|    `skip():fun`    |           跳过指定字符数           |
+
+关于上述方法的详细参数类型请参考[官方文档](https://docs.gtk.org/gio/class.InputStream.html "点击跳转")。这些方法中一般都含有一个`GCancellable *:typ`类型和`GError**:typ`类型的参数，这两者都可以为`NULL:kwd`，前者是一个指示取消操作的实例，后者是一个初始化为`NULL:kwd`的`GError*:typ`指针的地址，代表方法执行时可能发生的错误。如果其他线程（同步方法，此线程将被阻塞）触发了取消，则方法会返回一个指示操作取消的错误（除非操作已经部分完成）。关于操作取消，请见下文操作取消一节。
+
+#### (2) `GOutputStream:typ`
+
+`GOutputStream:typ`抽象类声明的**同步**方法如下：
+
+|       方法名        |                作用                |
+| :-----------------: | :--------------------------------: |
+|    `close():fun`    |             关闭输出流             |
+|    `flush():fun`    |  强制将用户空间缓存的数据写入对象  |
+|   `printf():fun`    |             格式化写入             |
+|   `splice():fun`    |       将指定输入流的数据写入       |
+|   `vprintf():fun`   |    格式化写入，但不使用可变参数    |
+|    `write():fun`    |    将指定缓冲区的指定字节数写入    |
+|  `write_all():fun`  | 将指定缓冲区内的字符尽可能多地写入 |
+| `write_bytes():fun` |    将指定的`GBytes:typ`实例写入    |
+|   `writev():fun`    |        将指定的“向量组”写入        |
+| `writev_all():fun`  |   将指定的“向量组”尽可能多的写入   |
+
+与输入流类似，输出流也会有潜在的错误，并且大部分操作允许取消。表格中提到的“向量组”是`GOutputVector:typ`结构体的数组，该结构体的成员只有一个`gconstpointer:typ`指针和一个指示字节数的`gsize:typ`变量。
+
+#### (3) `GIOStream:typ`
+
+`GIOStream:typ`抽象类代表输入输出流，该类型没有直接输入或输出的方法，必须要获取输入流或输出流。
+
+```c [main.c]
+GFile *file = g_file_new_for_path("../src/main.c");
+GFileIOStream *stream = g_file_open_readwrite(file, NULL, NULL);
+g_object_unref(file);
+
+GInputStream *input = g_io_stream_get_input_stream(G_IO_STREAM(stream));
+GBytes *data = g_input_stream_read_bytes(input, 4096, NULL, NULL);
+g_print("%s\n", (gchar *)g_bytes_get_data(data, NULL));
+g_bytes_unref(data);
+
+GOutputStream *ouput = g_io_stream_get_output_stream(G_IO_STREAM(stream));
+g_output_stream_write_all(ouput, "// test\n", 8, NULL, NULL, NULL);
+
+g_io_stream_close(G_IO_STREAM(stream), NULL, NULL);
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+#include <gio/gio.h>
+
+int main() {
+    GFile *file = g_file_new_for_path("../src/main.c");
+    GFileIOStream *stream = g_file_open_readwrite(file, NULL, NULL);
+    g_object_unref(file);
+
+    GInputStream *input = g_io_stream_get_input_stream(G_IO_STREAM(stream));
+    GBytes *data = g_input_stream_read_bytes(input, 4096, NULL, NULL);
+    g_print("%s\n", (gchar *)g_bytes_get_data(data, NULL));
+    g_bytes_unref(data);
+
+    GOutputStream *ouput = g_io_stream_get_output_stream(G_IO_STREAM(stream));
+    g_output_stream_write_all(ouput, "// test\n", 8, NULL, NULL, NULL);
+
+    g_io_stream_close(G_IO_STREAM(stream), NULL, NULL);
+
+    return 0;
+}
+```
+
+#### (4) 输入/输出流的派生
+
+Gio 库为输入输出流提供了许多派生，包括：带转换的流、带缓冲的流等。由于输出流与输入流存在同种类的派生，因此此处仅介绍输入流的各个变种。
+
+- `BufferedInputStream:typ`：带缓冲的输入流
+- `DataInputStream:typ`：适用于读取数据的输入流（**输出流没有对应的派生**）
+- `ConverterInputStream:typ`：带转换的输入流（主要用于编码转换）
+- `FileInputStream:typ`：将文件作为输入的输入流
+- `MemoryInputStream:typ`：将内存区域作为输入的输入流
+- `UnixInputStream:typ`：将文件描述符对应的文件作为输入的输入流
+
+其中，`DataInputStream:typ`类是`BufferedInputStream:typ`类的子类。可以使用`BufferedInputStream:typ`类/`DataInputStream:typ`类和`ConverterInputStream:typ`类对输入流进行“二次封装”。
+
+```c [main.c]
+GFile *file = g_file_new_for_path("../src/main.c");
+GFileInputStream *input = g_file_read(file, NULL, NULL);
+g_object_unref(file);
+
+g_print("UTF-8：中文测试\n======\n"); // [!code highlight]
+
+// 将 UTF-8 编码转换为 GBK 编码
+GCharsetConverter *converter =
+    g_charset_converter_new("GBK", "UTF-8", NULL);
+GInputStream *converted = g_converter_input_stream_new(
+    G_INPUT_STREAM(input), G_CONVERTER(converter));
+g_object_unref(converter);
+
+// 添加缓冲
+GInputStream *buffered = g_buffered_input_stream_new(converted);
+
+GBytes *data = g_input_stream_read_bytes(buffered, 4096, NULL, NULL);
+g_print("%s\n", (gchar *)g_bytes_get_data(data, NULL));
+g_bytes_unref(data);
+
+g_input_stream_close(buffered, NULL, NULL);
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+UTF-8锛氫腑鏂囨祴璇?
+======
+#include <gio/gio.h>
+
+int main() {
+    GFile *file = g_file_new_for_path("../src/main.c");
+    GFileInputStream *input = g_file_read(file, NULL, NULL);
+    g_object_unref(file);
+
+    g_print("UTF-8：中文测试\n======\n");
+
+    GCharsetConverter *converter =
+        g_charset_converter_new("GBK", "UTF-8", NULL);
+    GInputStream *converted = g_converter_input_stream_new(
+        G_INPUT_STREAM(input), G_CONVERTER(converter));
+    g_object_unref(converter);
+    GInputStream *buffered = g_buffered_input_stream_new(converted);
+
+    GBytes *data = g_input_stream_read_bytes(buffered, 4096, NULL, NULL);
+    g_print("%s\n", (gchar *)g_bytes_get_data(data, NULL));
+    g_bytes_unref(data);
+
+    g_input_stream_close(buffered, NULL, NULL);
+
+    return 0;
+}
+```
+
+Windows 默认的终端以 GBK 编码，源代码文件则以 UTF-8 编码，这就会导致直接打印中文字符会导致乱码。
+
+### 2. 文件操作
+
+与文件相关的类型是`GFile:typ`接口。实际上，文件对象“背后”并不是真正实际存在的文件，它更像是一个路径。在执行读写前，不会有任何文件被打开或创建。`GFile:typ`接口声明的部分**同步**方法如下：
+
+|           方法名           |                   作用                    |
+| :------------------------: | :---------------------------------------: |
+|     `append_to():fun`      |        创建向文件末尾写入的输出流         |
+|        `copy():fun`        |                 复制文件                  |
+|       `create():fun`       |          新建文件，并创建输出流           |
+|  `create_readwrite():fun`  |        新建文件，并创建输入输出流         |
+|       `delete():fun`       |                 删除文件                  |
+|        `dup():fun`         |            生成第二“文件句柄”             |
+|       `equal():fun`        | 判断两个`GFile:typ`实例是否指向同一份文件 |
+|     `load_bytes():fun`     |      读取文件内容为`GBytes:typ`实例       |
+|   `load_contents():fun`    |          读取文件内容为字符数组           |
+|   `make_directory():fun`   |                创建文件夹                 |
+| `make_symbolic_link():fun` |                创建软链接                 |
+|        `move():fun`        |                 移动文件                  |
+|   `open_readwrite():fun`   |              创建输入输出流               |
+|        `read():fun`        |                创建输入流                 |
+|      `replace():fun`       |      以替换文件内容的方式创建输出流       |
+|  `replace_contents():fun`  |         用指定字符串替换文件内容          |
+| `replace_readwrite():fun`  |    以替换文件内容的方式创建输入输出流     |
+|       `trash():fun`        |            将文件移动到回收站             |
+
+其中，生成第二“文件句柄”类似于`g_object_ref():fun`函数，但前者是线程安全的。`GFile:typ`类型本身不是线程安全的，若要在线程间共享同一个文件句柄，只能使用`dup():fun`方法。
+
+与文件属性相关的类型是`GFileInfo:typ`类，与目录相关的类是`GFileEnumerator:typ`类。这两个类的具体用法请参考官方文档。文件属性部分的“命名空间”在[此处](https://docs.gtk.org/gio/file-attributes.html "点击跳转")有详细说明。
+
+### 3. 套接字
+
+Gio 库提供了`GSocket:typ`类、`GSocketClient:typ`类和`GSocketService:typ`类（或`SocketListener:typ`类），一般情况下使用后两者即可。`GSocket:typ`是对 POSIX 标准的套接字的封装，它既可以做“服务端”也可以做“客户端”。
+
+```c [client.c]
+// 创建使用 TCP/IPv4 协议的套接字
+GSocket *client = g_socket_new(G_SOCKET_FAMILY_IPV4, G_SOCKET_TYPE_STREAM,
+                               G_SOCKET_PROTOCOL_TCP, NULL);
+// 连接到“服务端”
+GSocketAddress *address =
+    g_inet_socket_address_new_from_string("127.0.0.1", 27456);
+g_socket_connect(client, address, NULL, NULL);
+g_object_unref(address);
+
+// 发送消息到服务端
+g_socket_send(client, "1145141919810\n", 14, NULL, NULL);
+
+g_socket_close(client, NULL);
+g_object_unref(client);
+```
+
+```c [server.c]
+// 创建使用 TC/IPv4 协议的套接字
+GSocket *server = g_socket_new(G_SOCKET_FAMILY_IPV4, G_SOCKET_TYPE_STREAM,
+                                G_SOCKET_PROTOCOL_TCP, NULL);
+
+// 绑定地址
+GSocketAddress *address =
+    g_inet_socket_address_new_from_string("127.0.0.1", 27456);
+g_socket_bind(server, address, TRUE, NULL);
+g_object_unref(address);
+
+// 开始监听，阻塞并等待“客户端”连接
+g_socket_listen(server, NULL);
+GSocket *connection = g_socket_accept(server, NULL, NULL);
+
+// 阻塞并等待“客户端”发送数据
+GBytes *data = g_socket_receive_bytes(connection, 4096, -1, NULL, NULL);
+g_print("%s", (gchar *)g_bytes_get_data(data, NULL));
+
+g_bytes_unref(data);
+g_socket_close(connection, NULL);
+g_object_unref(connection);
+g_socket_close(server, NULL);
+g_object_unref(server);
+```
+
+```console [命令行]
+> ./bin/server
+1145141919810
+```
+
+`GSocketClient:typ`类是轻量级的、面向**有连接**的、用于客户端的套接字。`GSocketService:typ`类是`SocketListener:typ`类的子类，后者可以保有多个侦听套接字，前者则是更上层的封装。
+
+```c [client.c]
+GSocketClient *client = g_socket_client_new();
+
+// 设置套接字，使用 TCP/IPv4 协议
+g_socket_client_set_family(client, G_SOCKET_FAMILY_IPV4);
+g_socket_client_set_protocol(client, G_SOCKET_PROTOCOL_TCP);
+g_socket_client_set_socket_type(client, G_SOCKET_TYPE_STREAM);
+
+// 连接到指定“服务端”
+GSocketAddress *address =
+    g_inet_socket_address_new_from_string("127.0.0.1", 27456);
+GSocketConnection *connection = g_socket_client_connect(
+    client, G_SOCKET_CONNECTABLE(address), NULL, NULL);
+g_object_unref(address);
+
+// 获取输出流，并输出数据
+GOutputStream *output =
+    g_io_stream_get_output_stream(G_IO_STREAM(connection));
+g_output_stream_write_all(output, "1145141919810\n", 14, NULL, NULL, NULL);
+
+g_io_stream_close(G_IO_STREAM(connection), NULL, NULL);
+g_object_unref(connection);
+g_object_unref(client);
+```
+
+```c [server.c]
+GSocketService *server = g_socket_service_new();
+
+// 设置套接字，使用 TCP/IPv4 协议监听指定端口
+GSocketAddress *address =
+    g_inet_socket_address_new_from_string("127.0.0.1", 27456);
+g_socket_listener_add_address(G_SOCKET_LISTENER(server), address,
+                                G_SOCKET_TYPE_STREAM, G_SOCKET_PROTOCOL_TCP,
+                                NULL, NULL, NULL);
+g_object_unref(address);
+
+// 阻塞，等待“客户端”连接
+GSocketConnection *connection =
+    g_socket_listener_accept(G_SOCKET_LISTENER(server), NULL, NULL, NULL);
+
+// 获取输入流，并接收数据
+GInputStream *input = g_io_stream_get_input_stream(G_IO_STREAM(connection));
+GBytes *data = g_input_stream_read_bytes(input, 4096, NULL, NULL);
+g_print("%s\n", (gchar *)g_bytes_get_data(data, NULL));
+g_bytes_unref(data);
+
+g_io_stream_close(G_IO_STREAM(connection), NULL, NULL);
+g_object_unref(connection);
+g_socket_service_stop(server);
+g_object_unref(server);
+```
+
+在上述代码中，“客户端”和“服务端”在连接后都会返回一个`GSocketConnection:typ`类的实例，该类型继承自`GIOStream:typ`类（输入输出流）。`GSocketService:typ`还有一个信号`incoming`，该信号将在有新的“客户端”连接时触发，但：**该信号仅允许异步**。关于异步 I/O，将在异步一节详述。
+
+### 4. 异步
+
+Gio 中的异步函数以`_async`结尾，而以`_finish`结尾的函数则类似于其它编程语言中的`then():fun`方法，应当在异步函数的回调函数中被调用以获取结果。下述代码以异步读取文件为例：
+
+```c [main.c]
+#include <gio/gio.h>
+
+static void data_read(GObject *source_object, GAsyncResult *res,
+                      gpointer data) {
+    // 获取异步任务结果：文件内容
+    GBytes *bytes = g_input_stream_read_bytes_finish(
+        G_INPUT_STREAM(source_object), res, NULL);
+
+    g_print("%s\n", (gchar *)g_bytes_get_data(bytes, NULL));
+    g_bytes_unref(bytes);
+    g_object_unref(source_object);
+
+    // 让主事件循环退出
+    g_main_loop_quit(data); // [!code highlight]
+}
+
+static void file_open(GObject *source_object, GAsyncResult *res,
+                      gpointer data) {
+    // 获取异步任务结果：文件输入流
+    GFileInputStream *input =
+        g_file_read_finish(G_FILE(source_object), res, NULL);
+
+    // 发起异步任务：读取输入流
+    g_input_stream_read_bytes_async(G_INPUT_STREAM(input), 4096,
+                                    G_PRIORITY_DEFAULT, NULL, data_read, data);
+    g_object_unref(source_object);
+}
+
+int main() {
+    GFile *file = g_file_new_for_path("../src/main.c");
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+
+    // 发起异步任务：以只读方式打开文件
+    g_file_read_async(file, G_PRIORITY_DEFAULT, NULL, file_open, loop);
+
+    // 开始执行主事件循环，将会阻塞
+    g_main_loop_run(loop); // [!code highlight]
+
+    g_main_loop_unref(loop);
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+#include <gio/gio.h>
+
+static void data_read(GObject *source_object, GAsyncResult *res,
+                      gpointer data) {
+    GBytes *bytes = g_input_stream_read_bytes_finish(
+        G_INPUT_STREAM(source_object), res, NULL);
+    g_print("%s\n", (gchar *)g_bytes_get_data(bytes, NULL));
+    g_bytes_unref(bytes);
+    g_object_unref(source_object);
+    g_main_loop_quit(data);
+}
+
+static void file_open(GObject *source_object, GAsyncResult *res,
+                      gpointer data) {
+    GFileInputStream *input =
+        g_file_read_finish(G_FILE(source_object), res, NULL);
+
+    g_input_stream_read_bytes_async(G_INPUT_STREAM(input), 4096,
+                                    G_PRIORITY_DEFAULT, NULL, data_read, data);
+    g_object_unref(source_object);
+}
+
+int main() {
+    GFile *file = g_file_new_for_path("../src/main.c");
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+
+    g_file_read_async(file, G_PRIORITY_DEFAULT, NULL, file_open, loop);
+
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
+
+    return ret;
+}
+```
+
+使用异步时必须使用`GMainLoop:typ`结构体，否则异步任务还未完成进程就将退出；也不能使用死循环，否则将会一直阻塞在循环内。关于主事件循环，将在下文事件循环一节详述。
+
+### 5. 操作取消
+
+Gio 库的大部分 I/O 操作都可以被取消。当 I/O 操作被取消时，操作会返回一个`G_IO_ERROR_CANCELLED:kwd`异常（包括异步 I/O）。可以被取消的函数的参数中会含有一个`GCancellable *:typ`类型的参数。
+
+```c [main.c]
+static GMainLoop *loop = NULL;
+
+/* 省略部分代码 ······ */
+
+static void file_open(GObject *source_object, GAsyncResult *res,
+                      gpointer data) {
+    GError *error = NULL;
+    GFileInputStream *input =
+        g_file_read_finish(G_FILE(source_object), res, &error);
+    if (error != NULL) {
+        // 转换字符编码
+        gchar *temp = g_locale_from_utf8(error->message, -1, NULL, NULL, NULL);
+        g_print("error: %s\n", temp);
+
+        g_free(temp);
+        g_error_free(error);
+        g_object_unref(source_object);
+        g_main_loop_quit(loop);
+        return;
+    }
+
+    /* 这后面实际上不会执行，因为取消操作太快了 */
+
+    g_input_stream_read_bytes_async(G_INPUT_STREAM(input), 4096,
+                                    G_PRIORITY_DEFAULT, data, data_read, NULL);
+    g_object_unref(source_object);
+}
+
+static void cancelled(GCancellable *signal, gpointer data) {
+    g_print("operation cancelled\n");
+}
+
+int main() {
+    GFile *file = g_file_new_for_path("../src/main.c");
+    GCancellable *signal = g_cancellable_new();
+
+    loop = g_main_loop_new(NULL, FALSE);
+
+    // 当操作取消后，触发回调函数
+    g_cancellable_connect(signal, G_CALLBACK(cancelled), NULL, NULL); // [!code highlight]
+
+    // 发起异步任务
+    g_file_read_async(file, G_PRIORITY_DEFAULT, signal, file_open, signal);
+
+    // 取消异步任务
+    g_cancellable_cancel(signal);
+
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
+
+    g_object_unref(signal);
+
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+operation cancelled
+error: 操作被取消
+```
+
+<Note type="warn">
+
+<NoteTitle>`GCancellable:typ`的信号</NoteTitle>
+
+根据官方文档描述，虽然`GCancellable:typ`实例是线程安全的，但是`cancelled`信号在多线程中取消链接时、在信号连接前触发取消时均有可能触发竞态条件。因此不推荐使用`g_signal_connect():fun`一类的函数处理此类型的信号。作为替代，应该使用`g_cancellable_connect():fun`方法和`g_cancellable_disconnect():fun`方法。
+
+</Note>
+
+当操作由一系列异步任务组成时，向下传递`GCancellable:typ`实例不太方便，此时可以使用`GCancellable:typ`栈。每个线程均有一个独立的`GCancellable:typ`栈。`g_cancellable_push_current():fun`方法会将一个实例放入一个由 Gio 库内部维护的栈，通过`g_cancellable_get_current():fun`**静态**方法可以获取栈顶的实例。当不再使用栈顶实例时，应使用`g_cancellable_pop_current():fun`方法将指定实例从栈顶移除。若指定实例不是栈顶实例，则无事发生。
+
+## 四、运行时加载
+
+GModule 库提供了便利的、可以在执行时动态加载动态链接库的 API。程序不必在编译时就链接动态链接库，作为代替，可以通过程序内部的代码逻辑来确定如何加载动态链接库。在使用 CMake 作为构建系统时，只有以`SHARED`或者`MODULE`方式编译的链接库可以被动态加载。下述代码会读取指定文件夹下所有文件并尝试将文件加载为动态链接库：
+
+```c [src/main.c]
+#include <gio/gio.h>
+#include <gmodule.h>
+
+typedef void (*PluginInit)();
+
+static void load_module(const gchar *path) {
+    PluginInit func = NULL;
+    GModule *dll = g_module_open(path, G_MODULE_BIND_MASK);
+
+    if (dll == NULL) return;
+    if (!g_module_symbol(dll, "init", (gpointer *)&func)) { // [!code highlight]
+        g_print("no plugin init function\n");
+        return;
+    }
+    if (func == NULL) {
+        g_print("init function is NULL\n");
+        return;
+    }
+
+    // 调用动态链接库中的 init() 函数
+    func();
+
+    if (!g_module_close(dll)) g_print("error: %s\n", g_module_error());
+}
+
+int main(int argc, char **argv) {
+    // 需要一个路径参数，该路径下文件均为动态链接库
+    if (argc != 2) return 0;
+    GFile *dir = g_file_new_for_path(argv[1]);
+
+    // 遍历指定路径下的文件
+    GFileEnumerator *iter = g_file_enumerate_children(
+        dir, "standard::name", G_FILE_QUERY_INFO_NONE, NULL, NULL);
+    GFileInfo *info = g_file_enumerator_next_file(iter, NULL, NULL);
+    while (info != NULL) {
+        gchar *path =
+            g_build_path("/", argv[1], g_file_info_get_name(info), NULL);
+
+        load_module(path);
+
+        g_free(path);
+        g_object_unref(info);
+        info = g_file_enumerator_next_file(iter, NULL, NULL);
+    }
+
+    g_object_unref(iter);
+    g_object_unref(dir);
+
+    return 0;
+}
+```
+
+```c [src/plugin.c]
+#include <gmodule.h>
+
+G_MODULE_EXPORT void init() { g_print("plugin init\n"); }
+```
+
+```cmake [CMakeLists.txt]
+cmake_minimum_required(VERSION 3.30.3)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(CMAKE_BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build)
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+set(CMAKE_C_COMPILER clang)
+
+project(hello VERSION 0.0.1 LANGUAGES C)
+
+find_package(PkgConfig REQUIRED)
+pkg_search_module(GIO REQUIRED gio-2.0)
+pkg_search_module(GMODULE REQUIRED gmodule-2.0)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src ${GIO_INCLUDE_DIRS} ${GMODULE_INCLUDE_DIRS})
+
+# 将 main.c 编译为可执行文件
+add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${GIO_LIBRARIES} ${GMODULE_LIBRARIES})
+
+# 将 plugin.c 编译为动态链接库
+add_library(plugin MODULE ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin.c)
+target_link_libraries(plugin PRIVATE ${GMODULE_LIBRARIES})
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make
+> mkdir ../bin/mod && mv ../bin/libplugin.dll ../bin/mod
+> ../bin/hello ../bin/mod/
+plugin init
+```
+
+## 五、杂项
+
+GLib 库还提供了许多数据类型、宏、类型转换和字符串工具等。本章节将简略介绍之，详情建议参考官方文档。
+
+### 1. 序列化与反序列化
+
+`GVariant:typ`类型的实例可以存储任意类型的值，类似于`GValue:typ`，但其实例存储的值在对象被创建之时就已确定，并且不可被更改。`GVariant:typ`实例可以存储简单的值（例如整型），也可以存储数组甚至是键值对。`GVariant:typ`类型常见于需要序列化数据的场景中。
+
+在`GVariant:typ`的各种构造函数中，最“基础”的是`g_variant_new():fun`函数。该函数类似于`printf():typ`函数，以格式化字符串作为第一个参数，剩余参数为可变长度参数。但`g_variant_new():fun`函数的格式化字符串规定相当复杂，此处不做赘述，详情请参考[官方文档](https://docs.gtk.org/glib/gvariant-format-strings.html "点击跳转")。下述代码构造了一个存储了一个元组的`GVariant:typ`实例：
+
+```c
+gboolean b = TRUE;
+guchar y = 'a';
+gint16 n = 0;
+guint16 q = 1;
+gint32 i = 2;
+guint32 u = 3;
+gint64 x = 4;
+guint64 t = 5;
+gdouble d = 6;
+GVariant *test = g_variant_new("(bynqiuxthd)", b, y, n, q, i, u, x, t, d);
+
+g_variant_unref(test);
+```
+
+`GVariant:typ`类型支持存储元组、映射和数组。当需要序列化时，调用`g_variant_print ():fun`方法即可得到`gchar *:typ`字符串；当需要反序列化时，调用`g_variant_parse():fun`**静态方法**即可得到`GVariant:typ`实例，再通过`g_variant_get():fun`方法即可获取数据。
+
+```c [main.c]
+// 需要存储数组等类型时，必须使用 GVariantBuilder
+GVariantBuilder *builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+g_variant_builder_add(builder, "s", "114");
+g_variant_builder_add(builder, "s", "514");
+g_variant_builder_add(builder, "s", "1919");
+g_variant_builder_add(builder, "s", "810");
+GVariant *value = g_variant_new("as", builder);
+g_variant_builder_unref(builder);
+
+// 序列化，并查看序列化的结果
+gchar *str = g_variant_print(value, TRUE);
+g_variant_unref(value);
+g_print("serialized: %s\n", str);
+
+// 反序列化，并提取其中的内容
+value = g_variant_parse(G_VARIANT_TYPE("as"), str, NULL, NULL, NULL);
+GVariantIter *iterator = NULL;
+g_variant_get(value, "as", &iterator);
+while (g_variant_iter_next(iterator, "s", &str)) {
+    g_print("%s\n", str);
+    g_free(str);
+}
+g_variant_unref(value);
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+serialized: ['114', '514', '1919', '810']
+114
+514
+1919
+810
+```
+
+GLib 也亲切地为`GVariant:typ`类型的方法提供了各种变体，程序员可以在不使用格式化字符串或`GVariantBuilder:typ`类型的情况下完成复杂类型的序列化。详情请参考[官方文档](https://docs.gtk.org/glib/struct.Variant.html "点击跳转")。
+
+### 2. 自动释放
+
+GLib 库提供了一组用于自动释放的宏。被这些宏标注的变量或指针在超出其作用域时，编译器在编译期会自动添加释放它们的代码。**注意，下述的宏仅对 gcc 和 clang 编译器生效，且被标注的变量/指针必须在声明时就初始化**。
+
+```c [sample-auto-clean.h]
+#ifndef __SAMPLE_AUTO_CLEAN_H__
+#define __SAMPLE_AUTO_CLEAN_H__
+
+#include <glib-object.h>
+
+// 声明一个新类型
+#define SAMPLE_TYPE_AUTO_CLEAN sample_auto_clean_get_type()
+G_DECLARE_FINAL_TYPE(SampleAutoClean, sample_auto_clean, SAMPLE, AUTO_CLEAN,
+                     GObject)
+
+#endif  // __SAMPLE_AUTO_CLEAN_H__
+```
+
+```c [sample-auto-clean.c]
+#include "sample-auto-clean.h"
+
+struct _SampleAutoClean {
+    GObject parent_instance;
+};
+
+G_DEFINE_FINAL_TYPE(SampleAutoClean, sample_auto_clean, G_TYPE_OBJECT);
+
+static void sample_auto_clean_init(SampleAutoClean *this) {}
+
+// 当此类型实例被释放时，会输出提示
+static void dispose(GObject *this) { g_print("SampleAutoClean disposed.\n"); } // [!code highlight]
+
+static void sample_auto_clean_class_init(SampleAutoCleanClass *class) {
+    GObjectClass *object_class = G_OBJECT_CLASS(class);
+    object_class->dispose = dispose;
+}
+```
+
+```c [main.c]
+/* 情况1：实例是指针的类型 */
+g_print("scope 1 start\n");
+{ // <-- 作用域开始
+    g_autoptr(SampleAutoClean) object =
+        g_object_new(SAMPLE_TYPE_AUTO_CLEAN, NULL);
+} // <-- 作用域结束
+g_print("scope 1 end\n");
+
+SampleAutoClean *object = g_object_new(SAMPLE_TYPE_AUTO_CLEAN, NULL);
+
+/* 情况2：实例是变量的类型 */
+g_print("scope 2 start\n");
+{
+    g_auto(GValue) value = G_VALUE_INIT;
+    g_value_init(&value, SAMPLE_TYPE_AUTO_CLEAN);
+
+    /**
+     * 取走“所有权”
+     * 与 set_object() 方法不同，该方法不会增加 object 的引用计数
+     * 并且在释放时依然会减少 object 的引用计数
+     */
+    g_value_take_object(&value, object);
+}
+g_print("scope 2 end\n");
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+scope 1 start
+SampleAutoClean disposed.
+scope 1 end
+scope 2 start
+SampleAutoClean disposed.
+scope 2 end
+```
+
+上述代码没有调用`g_object_unref():fun`函数，但实例均被释放。若想让自定义类型使用`g_auto():fun`宏，则必须通过`G_DEFINE_AUTO_CLEANUP_FREE_FUNC():fun`
+宏函数或`G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC ():fun`宏函数注册释放此类型实例时所使用的函数。这两者的区别是，前者会在释放后将实例的值设置为指定值，后者则是释放后不管。`g_autoptr():fun`宏与之对应的注册宏函数为`G_DEFINE_AUTOPTR_CLEANUP_FUNC():typ`。
+
+除了上述两个宏之外，还有`g_autofree:kwd`、`g_autolist():fun`、`g_autoslist():fun`和`g_autoqueue():fun`宏，分别用于一般指针、双向链表、单向链表和队列，详情请参见[官方文档](https://docs.gtk.org/glib/auto-cleanup.html "点击跳转")。
+
+### 3. 事件循环
+
+主事件循环（`GMainLoop:typ`类型）负责管理所有可用的事件源（`GSource:typ`类型）。为了能在不同线程中处理多个互相独立的事件源，每个线程都与一个上下文（`GMainContext:typ`类型）实例一一对应，事件源可以添加到多个上下文实例，也可以从上下文实例中移除。主事件循环在创建后会添加初始事件源，并调用`g_main_loop_run():fun`方法。该方法会持续检查各个事件源是否有新事件，并向对应的上下文实例发送事件。若某个事件在处理过程中调用了`g_main_loop_quit():fun`，则主事件循环会退出，`g_main_loop_run():fun`方法会返回。关于自定义事件源和细粒度事件循环控制，请参考[官方文档](https://docs.gtk.org/glib/main-loop.html "点击跳转")。
+
+### 4. 多线程、线程池与子进程
+
+当程序员使用了 GLib 库时，即便代码内没有使用多线程相关的函数，编译后的程序也有可能是多线程的，因为某些函数可能会自行创建线程。GLib 保证其内部是完全线程安全的（所有全局变量自动上锁），但程序员编写的代码仍需考虑线程安全。
+
+```c
+gpointer worker(gpointer data) {
+    while (TRUE) {
+        if (g_mutex_trylock(data)) {
+            g_print("thread got mutex\n");
+            break;
+        }
+
+        // 主动放弃 CPU
+        g_thread_yield();
+
+    }
+    g_mutex_unlock(data);
+    return NULL;
+}
+
+int main() {
+    GMutex mutex;
+    g_mutex_init(&mutex);
+    g_mutex_lock(&mutex);
+    GThread *thread = g_thread_new("name", worker, &mutex);
+
+    g_mutex_unlock(&mutex);
+
+    // 主线程等待此线程执行完毕
+    // 若不需要等待，则直接 unref() 即可
+    g_thread_join(thread);
+
+    g_mutex_clear(&mutex);
+
+    return 0;
+}
+```
+
+上述代码是一个使用多线程和锁的示例。GLib 只提供三种锁：互斥锁（`GMutex:typ`类型）、递归互斥锁（`GRecMutex:typ`类型）、读写锁（`GRWLock:typ`类型）。与信号量概念相关的部分被分散在了`GCond:typ`类型和原子类型里，详情请参考官方文档的[GCond 类型](https://docs.gtk.org/glib/struct.Cond.html "点击跳转")和[原子操作](https://docs.gtk.org/glib/atomic.html "点击跳转")。
+
+当程序需要重复执行大量任务，并且程序员希望将任务丢到线程里执行时，就不得不考虑线程启动与销毁的开销。这种情况下，使用线程池是最佳选择。
+
+```c [main.c]
+static void task(gpointer data, gpointer user_data) {
+    g_print("thread %llx: data = %s, user_data = %s\n", GPOINTER_TO_SIZE(data),
+            (const gchar *)data, (const gchar *)user_data);
+}
+
+int main() {
+    GThreadPool *pool = g_thread_pool_new(task, "user_data", 10, FALSE, NULL);
+
+    g_thread_pool_push(pool, "114", NULL);
+    g_thread_pool_push(pool, "514", NULL);
+    g_thread_pool_push(pool, "1919", NULL);
+    g_thread_pool_push(pool, "810", NULL);
+
+    // 释放线程池，但不立即结束，并且等待所有任务完成
+    g_thread_pool_free(pool, FALSE, TRUE);
+    return 0;
+}
+```
+
+```console [命令行]
+> cmake .. -G "MinGW Makefiles" && mingw32-make && ../bin/hello
+thread 7ff73be630a2: data = 1919, user_data = user_data
+thread 7ff73be630a7: data = 810, user_data = user_data
+thread 7ff73be6309a: data = 114, user_data = user_data
+thread 7ff73be6309e: data = 514, user_data = user_data
+```
+
+与子进程有关的类型是`GSubprocess:typ`，该类型提供父子进程通信（管道）、异步等功能，详情请参考[官方文档](https://docs.gtk.org/gio/class.Subprocess.html "点击跳转")。
+
+### 5. 数据结构
+
+GLib 内置了部分基础数据结构的实现：
+
+- `GArray:typ`，变长数组
+- `GPtrArray:typ`，仅用于指针，**元素被删除时，最后一个元素补位**
+- `GByteArray:typ`，字节的变长数组
+- `GSList:typ`，单向链表
+- `GList:typ`，双向链表
+- `GHashTable:typ`，哈希表
+- `GQueue:typ`，双向队列
+- `GAsyncQueue:typ`，异步双向队列/线程安全双向队列
+- `GTree:typ`，二叉树
+- `GNode:typ`，N 叉树
+- `GSequence:typ`，以平衡二叉树实现的链表
+- `GRefString:typ`，引用计数的字符串

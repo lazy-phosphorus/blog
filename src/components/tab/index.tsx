@@ -27,9 +27,9 @@ export function Tabs({ children }: TabsPropsType) {
         const self = event.currentTarget;
         self.parentElement!.nextElementSibling!.children[
             index.peek()
-        ]!.classList.remove("block");
+        ]!.classList.remove(style.block!);
         self.parentElement!.nextElementSibling!.children[i]!.classList.add(
-            "block",
+            style.block!,
         );
         index.value = i;
     }
@@ -44,7 +44,7 @@ export function Tabs({ children }: TabsPropsType) {
                             key={node2string(v)}
                             disabled={index.value === i}
                             type="button"
-                            title={node2string(v)}
+                            title={node2string(title)}
                             onClick={(e) => handleTabShift(e, i)}
                         >
                             {title}

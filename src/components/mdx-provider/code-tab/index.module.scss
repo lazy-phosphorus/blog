@@ -53,13 +53,6 @@
         }
     }
     > div:last-child {
-        display: grid;
-        grid-template-columns: 1fr;
-        transition: {
-            property: grid-template-columns;
-            duration: 0.25s;
-            timing-function: ease-in-out;
-        }
         > * {
             box-shadow: unset;
             margin: unset;
@@ -70,7 +63,7 @@
                 display: block;
             }
             > div {
-                padding-top: unset;
+                padding-top: calc(var(--font-size) / 2);
             }
         }
         &:not(:has(> .block)) > :first-child {

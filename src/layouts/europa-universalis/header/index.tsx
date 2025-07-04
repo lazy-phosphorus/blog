@@ -8,8 +8,10 @@ export function Header() {
     return (
         <>
             <div class={style.pcleft}>
-                <Avatar />
-                <div class={style.info}>
+                <button type="button" title="切换控制面板">
+                    <Avatar />
+                </button>
+                <div>
                     <div>
                         <Status />
                     </div>

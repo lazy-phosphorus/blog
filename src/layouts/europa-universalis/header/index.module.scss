@@ -6,10 +6,49 @@
     @media screen and (max-width: v.$screen-3xl) {
         display: none;
     }
-    > :first-child {
+    > button {
         pointer-events: all;
+        cursor: pointer;
+        border-radius: 50%;
+        background-color: var(--color-primary);
+        margin-right: calc(var(--font-size) / 2);
+        position: relative;
+        display: block;
+        overflow: hidden;
+        transition: {
+            property: background-color, margin-right;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        &::after {
+            content: "";
+            display: block;
+            position: absolute;
+            height: 100%;
+            width: 4px;
+            box-shadow: 0 0 0.25rem 1px white;
+            background-color: white;
+            filter: blur(1px);
+            transform: skewX(-30deg) translateX(calc(var(--header-height) / -2));
+            left: 0;
+            top: 0;
+        }
+        &:hover {
+            background-color: rgb(
+                from var(--color-primary) calc(r - 50) calc(g - 50) calc(b - 50)
+            );
+            &::after {
+                transform: skewX(-30deg)
+                    translateX(calc(var(--header-height) * 1.5));
+                transition: {
+                    property: transform;
+                    duration: 0.5s;
+                    timing-function: linear;
+                }
+            }
+        }
     }
-    > .info {
+    > div {
         height: 100%;
         > div {
             height: 50%;

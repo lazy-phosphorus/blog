@@ -1,11 +1,6 @@
 import * as mdx from "eslint-plugin-mdx";
-import react from "@eslint-react/eslint-plugin";
 import eslint from "@eslint/js";
 import prettier from "eslint-plugin-prettier/recommended";
-import dom from "eslint-plugin-react-dom";
-import hooks from "eslint-plugin-react-hooks-extra";
-import naming from "eslint-plugin-react-naming-convention";
-import webapi from "eslint-plugin-react-web-api";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -15,15 +10,7 @@ export default tseslint.config(
     },
     {
         files: ["**/*.ts", "**/*.tsx"],
-        extends: [
-            eslint.configs.recommended,
-            tseslint.configs.recommended,
-            dom.configs.recommended,
-            webapi.configs.recommended,
-            hooks.configs.recommended,
-            naming.configs.recommended,
-            react.configs["recommended-typescript"],
-        ],
+        extends: [eslint.configs.recommended, tseslint.configs.recommended],
         languageOptions: {
             parser: tseslint.parser,
             parserOptions: {
@@ -32,13 +19,9 @@ export default tseslint.config(
             },
         },
         rules: {
-            // Put rules you want to override here
-            "react-dom/no-dangerously-set-innerhtml": "warn",
             "@typescript-eslint/no-unused-vars": [
                 1,
-                {
-                    argsIgnorePattern: "^_",
-                },
+                { argsIgnorePattern: "^_" },
             ],
             "@typescript-eslint/no-namespace": 0,
         },

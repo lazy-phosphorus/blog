@@ -9,6 +9,6 @@ export abstract class BaseException {
         return <h1>{this.title}</h1>;
     }
     public get Message() {
-        return <p>{this.message}</p>;
+        return <div>{this.message}</div>;
     }
 }

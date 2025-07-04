@@ -1,5 +1,6 @@
 import { useSignal } from "@preact/signals";
-import { useEffect, useRef } from "preact/hooks";
+import type { JSX } from "preact";
+import { useCallback, useEffect, useRef } from "preact/hooks";
 import { Image } from "@/components/image";
 import { IconNext } from "@svg/next";
 import { IconPause } from "@svg/pause";
@@ -7,6 +8,10 @@ import { IconPlay } from "@svg/play";
 import { IconPrevious } from "@svg/previous";
 import { musicList } from "./config";
 import style from "./index.module.scss";
+
+function handleCanPlay(event: JSX.TargetedEvent<HTMLAudioElement>) {
+    event.currentTarget.play();
+}
 
 export function MusicPlayer() {
     const index = useSignal(0);
@@ -23,62 +28,77 @@ export function MusicPlayer() {
     }, [audio]);
 
     /* onTimeUpdate 也可以实现，但是帧率很低 */
-    function rotateAnime(timestamp: DOMHighResTimeStamp) {
-        if (audio.current!.paused) {
-            startTimestamp.current = -1;
-            return;
-        } else if (startTimestamp.current !== -1) {
-            angle.current += (timestamp - startTimestamp.current) * 0.005;
-            if (angle.current > 360) angle.current -= 360;
-            cover.current!.style.setProperty("--angle", `${angle.current}deg`);
-        }
-        startTimestamp.current = timestamp;
-        requestAnimationFrame(rotateAnime);
-    }
+    const rotateAnime = useCallback(
+        (timestamp: DOMHighResTimeStamp) => {
+            if (audio.current!.paused) {
+                startTimestamp.current = -1;
+                return;
+            } else if (startTimestamp.current !== -1) {
+                angle.current += (timestamp - startTimestamp.current) * 0.005;
+                if (angle.current > 360) angle.current -= 360;
+                cover.current!.style.setProperty(
+                    "--angle",
+                    `${angle.current}deg`,
+                );
+            }
+            startTimestamp.current = timestamp;
+            requestAnimationFrame(rotateAnime);
+        },
+        [audio, startTimestamp, angle, cover],
+    );
 
-    function handleCanPlay() {
-        audio.current!.play();
-    }
+    const handlePrevious = useCallback(
+        () =>
+            (index.value =
+                (index.peek() + musicList.length - 1) % musicList.length),
+        [index, musicList],
+    );
 
-    function handlePrevious() {
-        index.value = (index.peek() + musicList.length - 1) % musicList.length;
-    }
-
-    function handleTogglePlay() {
+    const handleTogglePlay = useCallback(() => {
         if (audio.current!.paused) audio.current!.play();
         else audio.current!.pause();
         audio.current!.play();
-    }
+    }, [audio]);
 
-    function handleNext() {
-        index.value = (index.peek() + 1) % musicList.length;
-    }
+    const handleNext = useCallback(
+        () => (index.value = (index.peek() + 1) % musicList.length),
+        [index, musicList],
+    );
 
-    function handleOnPlay() {
+    const handleOnPlay = useCallback(() => {
         isPaused.value = false;
         requestAnimationFrame(rotateAnime);
-    }
+    }, [isPaused, rotateAnime]);
 
-    function handleOnPause() {
-        isPaused.value = true;
-    }
+    const handleOnPause = useCallback(
+        () => (isPaused.value = true),
+        [isPaused],
+    );
 
-    function handleOnEnd() {
-        handleNext();
-    }
+    const handleOnTimeUpdate = useCallback<
+        JSX.GenericEventHandler<HTMLAudioElement>
+    >(
+        (event) => {
+            const self = event.currentTarget;
+            let ratio = (self.currentTime / self.duration) * 100;
+            if (isNaN(ratio)) ratio = 0;
+            progress.current!.style.setProperty(
+                "--ratio",
+                `${ratio.toFixed(2)}%`,
+            );
+        },
+        [progress],
+    );
 
-    function handleOnTimeUpdate() {
-        let ratio =
-            (audio.current!.currentTime / audio.current!.duration) * 100;
-        if (isNaN(ratio)) ratio = 0;
-        progress.current!.style.setProperty("--ratio", `${ratio.toFixed(2)}%`);
-    }
-
-    function handleTimeAdjust(event: MouseEvent) {
-        const self = event.currentTarget as HTMLButtonElement;
-        audio.current!.currentTime =
-            (audio.current!.duration * event.offsetX) / self.offsetWidth;
-    }
+    const handleTimeAdjust = useCallback<
+        JSX.MouseEventHandler<HTMLButtonElement>
+    >(
+        (event) =>
+            (audio.current!.currentTime =
+                (audio.current!.duration * event.offsetX) /
+                event.currentTarget.offsetWidth),
+        [audio],
+    );
 
     return (
         <div class={style.music}>
@@ -89,7 +109,7 @@ export function MusicPlayer() {
                 src={musicList[index.value]!.src}
                 onPlay={handleOnPlay}
                 onPause={handleOnPause}
-                onEnded={handleOnEnd}
+                onEnded={handleNext}
                 onCanPlay={handleCanPlay}
                 onTimeUpdate={handleOnTimeUpdate}
             />

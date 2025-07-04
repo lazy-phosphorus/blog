@@ -12,11 +12,11 @@ export function node2string(node: ComponentChildren): string {
         throw new TypeException(
             "结点",
             (
-                <>
+                <p>
                     应为<Code type="typ">JSX.Element</Code>类型。实际类型为
                     <Code type="typ">{typeof node}</Code>，值为
                     <Code type="default">{String(node)}</Code> 。
-                </>
+                </p>
             ),
         );
 }

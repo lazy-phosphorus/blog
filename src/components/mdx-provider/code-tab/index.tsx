@@ -1,5 +1,6 @@
 import { useSignal } from "@preact/signals";
 import type { ComponentChildren, JSX } from "preact";
+import { useCallback } from "preact/hooks";
 import style from "./index.module.scss";
 import { Label } from "./label";
 
@@ -13,16 +14,16 @@ export function CodeTab({ children, buttons }: PropsType) {
     const index = useSignal(0);
     const labels = JSON.parse(buttons) as Labels;
 
-    function handleTabsShift(
-        event: JSX.TargetedMouseEvent<HTMLButtonElement>,
-        i: number,
-    ) {
-        const self = event.currentTarget;
-        const container = self.parentElement!.nextElementSibling!;
-        container.children[index.peek()]!.classList.remove(style.block!);
-        container.children[i]!.classList.add(style.block!);
-        index.value = i;
-    }
+    const handleTabsShift = useCallback(
+        (event: JSX.TargetedMouseEvent<HTMLButtonElement>, i: number) => {
+            const self = event.currentTarget;
+            const container = self.parentElement!.nextElementSibling!;
+            container.children[index.peek()]!.classList.remove(style.block!);
+            container.children[i]!.classList.add(style.block!);
+            index.value = i;
+        },
+        [index],
+    );
 
     return (
         <div class={style.codetab}>

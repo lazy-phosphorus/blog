@@ -1,5 +1,6 @@
 import { useSignal } from "@preact/signals";
-import type { JSX } from "preact";
+import type { JSX, RefCallback } from "preact";
+import { useCallback } from "preact/hooks";
 import { PlaceHolder } from "@/components/placeholder";
 import style from "./index.module.scss";
 
@@ -14,14 +15,15 @@ type PropsType = Readonly<
 export function Image({ src, title, alt, ...props }: PropsType) {
     const isLoaded = useSignal(false);
 
-    function handleOnLoad() {
-        isLoaded.value = true;
-    }
+    const handleOnLoad = useCallback(() => (isLoaded.value = true), [isLoaded]);
 
-    function handleImgMounted(element: HTMLImageElement | null) {
-        if (element === null) return;
-        if (element.complete) isLoaded.value = true;
-    }
+    const handleImgMounted = useCallback<RefCallback<HTMLImageElement>>(
+        (element) => {
+            if (element === null) return;
+            if (element.complete) isLoaded.value = true;
+        },
+        [isLoaded],
+    );
 
     return (
         <div

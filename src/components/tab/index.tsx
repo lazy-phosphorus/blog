@@ -1,5 +1,6 @@
 import { useSignal } from "@preact/signals";
 import type { ComponentChild, ComponentChildren, JSX, VNode } from "preact";
+import { useCallback } from "preact/hooks";
 import { node2string } from "@/utils/node2string";
 import style from "./index.module.scss";
 
@@ -20,19 +21,19 @@ type TabsPropsType = Readonly<{
 export function Tabs({ children }: TabsPropsType) {
     const index = useSignal(0);
 
-    function handleTabShift(
-        event: JSX.TargetedMouseEvent<HTMLButtonElement>,
-        i: number,
-    ) {
-        const self = event.currentTarget;
-        self.parentElement!.nextElementSibling!.children[
-            index.peek()
-        ]!.classList.remove(style.block!);
-        self.parentElement!.nextElementSibling!.children[i]!.classList.add(
-            style.block!,
-        );
-        index.value = i;
-    }
+    const handleTabShift = useCallback(
+        (event: JSX.TargetedMouseEvent<HTMLButtonElement>, i: number) => {
+            const self = event.currentTarget;
+            self.parentElement!.nextElementSibling!.children[
+                index.peek()
+            ]!.classList.remove(style.block!);
+            self.parentElement!.nextElementSibling!.children[i]!.classList.add(
+                style.block!,
+            );
+            index.value = i;
+        },
+        [index],
+    );
 
     return (
         <div class={style.tab}>

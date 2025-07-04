@@ -5,6 +5,7 @@ import type { PostDataType } from "@/types/post-data";
 import { IconFilter } from "@svg/filter";
 import { IconPost } from "@svg/post";
 import { IconTag } from "@svg/tag";
+import { IconWord } from "@svg/word";
 import style from "./index.module.scss";
 
 function categoryCount(posts: PostDataType["posts"]) {
@@ -55,7 +56,7 @@ export function Status() {
                 </Badge>
             </Tooltip>
             <Tooltip tip="文字总数" place="bottom">
-                <Badge class={style.badge} icon={IconTag}>
+                <Badge class={style.badge} icon={IconWord}>
                     {(wordCount(posts) / 1000).toFixed(2)}K
                 </Badge>
             </Tooltip>

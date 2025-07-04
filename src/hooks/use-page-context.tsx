@@ -1,6 +1,6 @@
 import { createContext } from "preact";
 import type { Context as C, ComponentChildren } from "preact";
-import { useContext as use } from "preact/hooks";
+import { useContext } from "preact/hooks";
 import type { PageContext } from "vike/types";
 
 const Context = createContext<PageContext>(void 0 as unknown as PageContext);
@@ -23,5 +23,5 @@ export function PageContextConsumer({ children }: ConsumerPropsType) {
 }
 
 export function usePageContext<T = unknown>() {
-    return use(Context as C<PageContext<T>>);
+    return useContext(Context as C<PageContext<T>>);
 }

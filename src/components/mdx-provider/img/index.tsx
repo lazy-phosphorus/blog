@@ -1,5 +1,6 @@
 import { useSignal } from "@preact/signals";
-import { useRef } from "preact/hooks";
+import type { JSX } from "preact";
+import { useCallback, useRef } from "preact/hooks";
 import { Image } from "@/components/image";
 import { Mask } from "@/components/mask";
 import style from "./index.module.scss";
@@ -10,55 +11,65 @@ type PropsType = {
     alt: string;
 };
 
+function handleImageMagnify(event: JSX.TargetedWheelEvent<HTMLDivElement>) {
+    const self = event.currentTarget;
+    const width = self.offsetWidth;
+    if (width <= 200 && event.deltaY < 0) return;
+    self.style.width = `${width + event.deltaY}px`;
+}
+
 export function img({ src, title, alt }: PropsType) {
     const isExpand = useSignal(false);
     const isMouseDown = useRef(false);
     const prevPoint = useRef<{ x: number; y: number } | null>(null);
 
-    function handleImageZoomIn() {
-        isExpand.value = true;
-    }
+    const handleImageZoomIn = useCallback(
+        () => (isExpand.value = true),
+        [isExpand],
+    );
 
-    function handleImageZoomOut(event: MouseEvent) {
-        if (event.target !== event.currentTarget) return;
-        isExpand.value = false;
-    }
+    const handleImageZoomOut = useCallback<
+        JSX.MouseEventHandler<HTMLDivElement>
+    >(
+        (event) => {
+            if (event.target !== event.currentTarget) return;
+            isExpand.value = false;
+        },
+        [isExpand],
+    );
 
-    function handleImageMagnify(event: WheelEvent) {
-        const self = event.target as HTMLDivElement;
-        const width = self.offsetWidth;
-        if (width <= 200 && event.deltaY < 0) return;
-        self.style.width = `${width + event.deltaY}px`;
-    }
+    const handleImageMouseDown = useCallback(
+        () => (isMouseDown.current = true),
+        [isMouseDown],
+    );
 
-    function handleImageMouseDown() {
-        isMouseDown.current = true;
-    }
-
-    function handleImageMouseUp() {
+    const handleImageMouseUp = useCallback(() => {
         isMouseDown.current = false;
         prevPoint.current = null;
-    }
+    }, [isMouseDown, prevPoint]);
 
-    function handleMouseMove(event: MouseEvent) {
-        const self = event.currentTarget as HTMLDivElement;
-        if (isMouseDown.current === false) return;
-        if (prevPoint.current === null) {
+    const handleMouseMove = useCallback<JSX.MouseEventHandler<HTMLDivElement>>(
+        (event) => {
+            const self = event.currentTarget;
+            if (isMouseDown.current === false) return;
+            if (prevPoint.current === null) {
+                prevPoint.current = {
+                    x: event.clientX,
+                    y: event.clientY,
+                };
+                return;
+            }
+            const left = self.offsetLeft;
+            const top = self.offsetTop;
+            self.style.left = `${left + event.clientX - prevPoint.current.x}px`;
+            self.style.top = `${top + event.clientY - prevPoint.current.y}px`;
             prevPoint.current = {
                 x: event.clientX,
                 y: event.clientY,
             };
-            return;
-        }
-        const left = self.offsetLeft;
-        const top = self.offsetTop;
-        self.style.left = `${left + event.clientX - prevPoint.current.x}px`;
-        self.style.top = `${top + event.clientY - prevPoint.current.y}px`;
-        prevPoint.current = {
-            x: event.clientX,
-            y: event.clientY,
-        };
-    }
+        },
+        [isMouseDown, prevPoint],
+    );
 
     return (
         <>

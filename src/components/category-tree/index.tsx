@@ -1,5 +1,6 @@
 import { useSignal } from "@preact/signals";
 import type { Signal } from "@preact/signals";
+import { useCallback } from "preact/hooks";
 import { Link } from "@/components/link";
 import { DataConsumer } from "@/hooks/use-data";
 import { Card } from "@/layouts/card";
@@ -18,9 +19,11 @@ type PropsType = Readonly<{
 }>;
 
 function CategoryList({ categories, counter, indexes, depth }: PropsType) {
-    function handleExpand(index: number) {
-        indexes.value = [...indexes.peek().slice(0, depth), index];
-    }
+    const handleExpand = useCallback(
+        (index: number) =>
+            (indexes.value = [...indexes.peek().slice(0, depth), index]),
+        [indexes],
+    );
 
     return (
         <ul class={style.ul}>

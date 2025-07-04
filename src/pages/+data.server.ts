@@ -10,8 +10,8 @@ export async function data(): ReturnType<DataAsync<PostDataType>> {
         await readdir(resolve(srcPath, "pages", "post", "(post)"))
     ).filter((v) => !v.startsWith("+"));
     for (const dir of dirs) {
-        const f = await import(`./post/(post)/${dir}/+data.server.ts`).then(
-            (v) => v.data,
+        const f = await import(`./post/(post)/${dir}/+frontmatter.ts`).then(
+            (v) => v.frontmatter,
         );
         posts.push({
             dirname: dir,

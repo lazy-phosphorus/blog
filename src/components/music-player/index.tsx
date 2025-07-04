@@ -20,7 +20,6 @@ export function MusicPlayer() {
 
     useEffect(() => {
         audio.current!.volume = 0.2;
-        audio.current!.play();
     }, [audio]);
 
     /* onTimeUpdate 也可以实现，但是帧率很低 */
@@ -37,6 +36,10 @@ export function MusicPlayer() {
         requestAnimationFrame(rotateAnime);
     }
 
+    function handleCanPlay() {
+        audio.current!.play();
+    }
+
     function handlePrevious() {
         index.value = (index.peek() + musicList.length - 1) % musicList.length;
     }
@@ -44,6 +47,7 @@ export function MusicPlayer() {
     function handleTogglePlay() {
         if (audio.current!.paused) audio.current!.play();
         else audio.current!.pause();
+        audio.current!.play();
     }
 
     function handleNext() {
@@ -70,9 +74,10 @@ export function MusicPlayer() {
         progress.current!.style.setProperty("--ratio", `${ratio.toFixed(2)}%`);
     }
 
-    function handleTimeAdjust(this: HTMLButtonElement, event: MouseEvent) {
+    function handleTimeAdjust(event: MouseEvent) {
+        const self = event.currentTarget as HTMLButtonElement;
         audio.current!.currentTime =
-            (audio.current!.duration * event.offsetX) / this.offsetWidth;
+            (audio.current!.duration * event.offsetX) / self.offsetWidth;
     }
 
     return (
@@ -85,11 +90,18 @@ export function MusicPlayer() {
                 onPlay={handleOnPlay}
                 onPause={handleOnPause}
                 onEnded={handleOnEnd}
+                onCanPlay={handleCanPlay}
                 onTimeUpdate={handleOnTimeUpdate}
             />
             <div class={style.info}>
-                <div class={style.title}>{musicList[index.value]!.title}</div>
-                <div class={style.author}>{musicList[index.value]!.author}</div>
+                <div class={style.metadata}>
+                    <div class={style.title}>
+                        {musicList[index.value]!.title}
+                    </div>
+                    <div class={style.author}>
+                        {musicList[index.value]!.author}
+                    </div>
+                </div>
                 <div class={style.controls}>
                     <button
                         type="button"

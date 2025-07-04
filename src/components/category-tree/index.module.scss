@@ -1,0 +1,68 @@
+.card {
+    width: fit-content;
+    flex: none;
+}
+
+.ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: calc(var(--font-size) / 2) var(--font-size);
+    opacity: 0;
+    height: 0;
+    margin: {
+        top: calc(var(--font-size) * 2);
+        bottom: calc(var(--font-size) * 2);
+    }
+    transition: {
+        property: gap, margin-top, margin-bottom;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    animation: {
+        name: fade;
+        duration: 0.25s;
+        iteration-count: 1;
+        timing-function: ease-in-out;
+        fill-mode: forwards;
+    }
+    @keyframes fade {
+        0% {
+            opacity: 0;
+            height: 0;
+        }
+        100% {
+            opacity: 100;
+            height: calc-size(auto, size);
+        }
+    }
+    > li {
+        line-height: 1;
+        flex: none;
+        display: block;
+        > button {
+            display: block;
+            cursor: pointer;
+            border-radius: 100vmax;
+            background-color: var(--color-primary);
+            color: var(--color-primary-content);
+            padding: calc(var(--font-size) / 2) var(--font-size);
+            transition: {
+                property: background-color, color, padding;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            &:hover {
+                background-color: rgb(
+                    from var(--color-primary) calc(r - 50) calc(b - 50)
+                        calc(b - 50)
+                );
+            }
+            &:disabled {
+                background-color: var(--color-accent);
+                color: var(--color-accent-content);
+            }
+        }
+    }
+}

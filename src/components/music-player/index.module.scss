@@ -32,20 +32,28 @@
     > .info {
         display: flex;
         flex-direction: column;
-        justify-content: space-evenly;
+        justify-content: space-between;
         min-width: calc(var(--font-size) * 7);
-        margin: {
-            left: var(--font-size);
-            right: var(--font-size);
-        }
+        margin: calc(var(--font-size) / 2) var(--font-size);
         transition: {
-            property: margin-left, margin-right;
+            property: margin, min-width;
             duration: 0.25s;
             timing-function: ease-in-out;
         }
-        > div {
+        @media screen and (max-width: v.$screen-3xl) {
+            margin: 0;
+        }
+        > .metadata {
             text-align: center;
-            line-height: 1;
+            line-height: 1.5;
+            opacity: 0;
+            animation: {
+                name: fade;
+                timing-function: ease-in-out;
+                duration: 0.25s;
+                iteration-count: 1;
+                fill-mode: forwards;
+            }
             @keyframes fade {
                 0% {
                     opacity: 0;
@@ -54,77 +62,62 @@
                     opacity: 100;
                 }
             }
-            &.title {
-                opacity: 0;
+            @media screen and (max-width: v.$screen-3xl) {
+                display: none;
+                margin: 0;
+            }
+            > .title {
                 font-size: calc(var(--font-size) - 0.25rem);
                 transition: {
                     property: font-size;
                     duration: 0.25s;
                     timing-function: ease-in-out;
                 }
-                animation: {
-                    name: fade;
-                    timing-function: ease-in-out;
-                    duration: 0.25s;
-                    iteration-count: 1;
-                    fill-mode: forwards;
-                }
-                @media screen and (max-width: v.$screen-3xl) {
-                    display: none;
-                }
             }
-            &.author {
-                opacity: 0;
+            > .author {
                 font-size: calc(var(--font-size) - 0.35rem);
                 transition: {
                     property: font-size;
                     duration: 0.25s;
                     timing-function: ease-in-out;
                 }
-                animation: {
-                    name: fade;
-                    timing-function: ease-in-out;
-                    duration: 0.25s;
-                    iteration-count: 1;
-                    fill-mode: forwards;
-                }
-                @media screen and (max-width: v.$screen-3xl) {
-                    display: none;
-                }
             }
-            &.controls {
-                width: 100%;
-                box-sizing: border-box;
-                display: none;
+        }
+        > .controls {
+            width: 100%;
+            box-sizing: border-box;
+            display: none;
+            align-items: center;
+            justify-content: space-evenly;
+            font-size: calc(var(--font-size) + 1rem);
+            margin-top: calc(var(--font-size) / 2);
+            transition: {
+                property: font-size, margin-top;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            @media screen and (max-width: v.$screen-3xl) {
+                display: flex;
+                height: 100%;
+                font-size: calc(var(--font-size) + 1.25rem);
+                margin-top: 0;
+            }
+            > button {
+                cursor: pointer;
+                color: var(--color-primary);
+                display: flex;
+                justify-content: center;
                 align-items: center;
-                justify-content: space-between;
-                font-size: calc(var(--font-size) + 1rem);
                 transition: {
-                    property: font-size;
+                    property: color;
                     duration: 0.25s;
                     timing-function: ease-in-out;
                 }
-                @media screen and (max-width: v.$screen-3xl) {
-                    display: flex;
-                    font-size: calc(var(--font-size) + 1.5rem);
-                }
-                > button {
-                    cursor: pointer;
-                    color: var(--color-primary);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    transition: {
-                        property: color;
-                        duration: 0.25s;
-                        timing-function: ease-in-out;
-                    }
-                    &:hover {
-                        color: rgb(
-                            from var(--color-primary) calc(r - 50) calc(g - 50)
-                                calc(b - 50)
-                        );
-                    }
+                &:hover {
+                    color: rgb(
+                        from var(--color-primary) calc(r - 50) calc(g - 50)
+                            calc(b - 50)
+                    );
                 }
             }
         }
@@ -157,12 +150,11 @@
             }
         }
     }
-    &:hover > .info > div {
-        &.controls {
+    &:hover > .info {
+        > .controls {
             display: flex;
         }
-        &.author,
-        &.title {
+        > .metadata {
             display: none;
         }
     }

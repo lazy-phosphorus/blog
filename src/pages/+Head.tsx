@@ -1,3 +1,3 @@
-export default function HeadDefault() {
+export function Head() {
     return <></>;
 }

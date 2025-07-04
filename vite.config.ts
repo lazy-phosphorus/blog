@@ -26,7 +26,6 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
     plugins: [
-        vike(),
         mdx({
             jsxImportSource: "preact",
             providerImportSource: "@mdx-js/preact",
@@ -78,7 +77,9 @@ export default defineConfig({
             ],
         }),
         preact(),
+        vike(),
     ],
+    assetsInclude: ["**/*.webp"],
     build: {
         target: "esnext",
     },
@@ -86,6 +87,11 @@ export default defineConfig({
         alias: {
             "@svg": resolve(__dirname, "src", "components", "svg"),
             "@": resolve(__dirname, "src"),
+        },
+    },
+    css: {
+        modules: {
+            generateScopedName: "[local]-[hash:base64:5]",
         },
     },
 });

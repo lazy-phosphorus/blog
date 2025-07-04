@@ -35,7 +35,9 @@ export function Navigator() {
                             .map(({ href, name }) => (
                                 <li key={href}>
                                     <Link href={href} title="跳转至此">
-                                        {decodeURIComponent(name)}
+                                        {decodeURIComponent(
+                                            decodeURIComponent(name),
+                                        )}
                                     </Link>
                                 </li>
                             ));

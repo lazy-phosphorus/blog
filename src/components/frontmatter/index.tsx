@@ -57,7 +57,7 @@ export function Frontmatter({ frontmatter, href }: PropsType) {
                         {frontmatter.categories.map((category) => (
                             <li key={category}>
                                 <Link
-                                    href={`/category/${encodeURIComponent(category)}/`}
+                                    href={`/post/?category=${encodeURIComponent(category)}`}
                                     title="查看此分类"
                                 >
                                     {category}
@@ -72,7 +72,7 @@ export function Frontmatter({ frontmatter, href }: PropsType) {
                         {frontmatter.tags.map((tag) => (
                             <li key={tag}>
                                 <Link
-                                    href={`/tag/${encodeURIComponent(tag)}/`}
+                                    href={`/post/?tag=${encodeURIComponent(tag)}`}
                                     title="查看此标签"
                                 >
                                     {tag}

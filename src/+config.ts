@@ -8,14 +8,23 @@ export const config: Config = {
             cumulative: true,
         },
         Head: {
-            env: { server: true, client: false },
+            env: { server: true, client: true },
             cumulative: true,
+        },
+        title: {
+            env: { server: true, client: true },
+            cumulative: false,
+        },
+        frontmatter: {
+            env: { server: true, client: false },
+            cumulative: false,
         },
     },
     prerender: true,
     trailingSlash: true,
     clientRouting: true,
     hydrationCanBeAborted: true,
+    injectScriptsAt: "HTML_END",
 };
 
 declare global {
@@ -26,6 +35,7 @@ declare global {
         interface IPageContextConfig {
             Layout: ComponentType<ILayoutProps>[];
             Page: ComponentType;
+            title?: string | ((context: PageContext) => string);
         }
 
         interface PageContextClient {

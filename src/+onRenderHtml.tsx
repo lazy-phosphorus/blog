@@ -1,11 +1,12 @@
 import { renderToStringAsync } from "preact-render-to-string";
 import { dangerouslySkipEscape, escapeInject } from "vike/server";
 import type { PageContextServer } from "vike/types";
+import { title } from "@/config";
 import { PageContextProvider } from "@/hooks/use-page-context";
 import { cumulative } from "@/utils/cumulative";
 
 export async function onRenderHtml(context: PageContextServer) {
-    const { Page, Layout, Head } = context.config;
+    const { Page, Layout, Head, title: t } = context.config;
     const html = await renderToStringAsync(
         <html lang="zh-cn">
             <head>
@@ -14,7 +15,11 @@ export async function onRenderHtml(context: PageContextServer) {
                     name="viewport"
                     content="width=device-width, initial-scale=1.0"
                 />
-                <title>Document</title>
+                <title>
+                    {t === void 0
+                        ? title
+                        : `${typeof t === "string" ? t : t(context)} | ${title}`}
+                </title>
                 {Head.reduce(
                     (acc, H) => (
                         <>
@@ -33,5 +38,7 @@ export async function onRenderHtml(context: PageContextServer) {
         </html>,
     );
 
-    return escapeInject`<!DOCTYPE html>${dangerouslySkipEscape(html)}`;
+    return {
+        documentHtml: escapeInject`<!DOCTYPE html>${dangerouslySkipEscape(html)}`,
+    };
 }

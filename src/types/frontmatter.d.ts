@@ -1,5 +1,3 @@
-import type { ComponentChildren } from "preact";
-
 export type FrontmatterType = {
     title: string;
     draft: boolean;
@@ -7,7 +5,7 @@ export type FrontmatterType = {
         publish: Date;
         modify: Date;
     };
-    description: ComponentChildren;
+    description: string;
     categories: string[];
     tags: string[];
     cover: string;

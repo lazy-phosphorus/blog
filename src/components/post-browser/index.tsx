@@ -1,10 +1,8 @@
 import { Frontmatter } from "@/components/frontmatter";
-import { DataConsumer } from "@/hooks/use-data";
+import { usePageContext } from "@/hooks/use-page-context";
 import { Card } from "@/layouts/card";
 import type { PostDataType } from "@/types/post-data";
 import style from "./index.module.scss";
-
-const PostConsumer = DataConsumer<PostDataType>;
 
 function publishDateDesc(
     a: PostDataType["posts"][number],
@@ -16,34 +14,40 @@ function publishDateDesc(
     );
 }
 
-type PropsType = Readonly<{ category?: string; tag?: string }>;
-
-export function PostBrowser({ category, tag }: PropsType) {
+export function PostBrowser() {
+    const { data, urlParsed } = usePageContext<PostDataType>();
+    const category = urlParsed.search.category;
+    const tag = urlParsed.search.tag;
     return (
-        <PostConsumer>
-            {({ posts }) =>
-                posts
-                    .toSorted(publishDateDesc)
-                    .filter(({ frontmatter }) => {
-                        if (category !== void 0)
-                            return frontmatter.categories.includes(category);
-                        if (tag !== void 0)
-                            return frontmatter.tags.includes(tag);
-                        return true;
-                    })
-                    .map(({ dirname, frontmatter }, i) => (
-                        <Card
-                            class={style.postcard}
-                            key={dirname}
-                            style={{ "--postcard-delay": `${i * 0.125}s` }}
-                        >
-                            <Frontmatter
-                                frontmatter={frontmatter}
-                                href={`/post/${dirname}/`}
-                            />
-                        </Card>
-                    ))
-            }
-        </PostConsumer>
+        <>
+            {data.posts
+                .toSorted(publishDateDesc)
+                .filter(({ frontmatter }) => {
+                    let result = true;
+                    if (category !== void 0)
+                        result =
+                            result &&
+                            frontmatter.categories.includes(
+                                decodeURIComponent(category),
+                            );
+                    if (tag !== void 0)
+                        result =
+                            result &&
+                            frontmatter.tags.includes(decodeURIComponent(tag));
+                    return result;
+                })
+                .map(({ dirname, frontmatter }, i) => (
+                    <Card
+                        class={style.postcard}
+                        key={dirname}
+                        style={{ "--postcard-delay": `${i * 0.125}s` }}
+                    >
+                        <Frontmatter
+                            frontmatter={frontmatter}
+                            href={`/post/${dirname}/`}
+                        />
+                    </Card>
+                ))}
+        </>
     );
 }

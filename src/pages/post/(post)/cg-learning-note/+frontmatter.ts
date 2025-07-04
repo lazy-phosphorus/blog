@@ -1,7 +1,7 @@
 import type { FrontmatterType } from "@/types/frontmatter.d";
-import cover from "./cover.webp";
+import cover from "./cover.webp?no-inline";
 
-export async function data(): Promise<FrontmatterType> {
+export async function frontmatter(): Promise<FrontmatterType> {
     return {
         title: "计算机图形学入门学习笔记",
         draft: true,

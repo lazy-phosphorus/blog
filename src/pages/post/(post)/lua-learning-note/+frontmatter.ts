@@ -1,7 +1,7 @@
 import type { FrontmatterType } from "@/types/frontmatter.d";
 import cover from "./cover.webp";
 
-export async function data(): Promise<FrontmatterType> {
+export async function frontmatter(): Promise<FrontmatterType> {
     return {
         title: "Lua 学习笔记",
         draft: false,

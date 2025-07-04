@@ -27,3 +27,46 @@
         }
     }
 }
+
+.gear {
+    animation: {
+        name: rotate;
+        duration: 3s;
+        timing-function: linear;
+        iteration-count: infinite;
+    }
+    @keyframes rotate {
+        0% {
+            transform: translateY(-2.5%) rotateX(-60deg) rotateY(30deg)
+                rotateZ(0deg);
+        }
+        50% {
+            transform: translateY(2.5%) rotateX(-60deg) rotateY(30deg)
+                rotateZ(180deg);
+        }
+        100% {
+            transform: translateY(-2.5%) rotateX(-60deg) rotateY(30deg)
+                rotateZ(360deg);
+        }
+    }
+}
+
+.hammer {
+    animation: {
+        name: flash;
+        duration: 1s;
+        timing-function: linear;
+        iteration-count: infinite;
+    }
+    @keyframes flash {
+        0% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+}

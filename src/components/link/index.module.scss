@@ -3,6 +3,7 @@
 }
 
 .link {
+    cursor: pointer;
     color: var(--color-primary);
     transition: {
         property: color, background-color, background-size;

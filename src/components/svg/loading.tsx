@@ -1,7 +1,9 @@
 import type { JSX } from "preact";
 import style from "@svg/svg.module.scss";
 
-export function IconLoading(props: JSX.IntrinsicElements["svg"]) {
+export function IconLoading(
+    props: Omit<JSX.IntrinsicElements["svg"], "children">,
+) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -21,7 +23,7 @@ export function IconLoading(props: JSX.IntrinsicElements["svg"]) {
             <g
                 class={style.gear}
                 fill="currentColor"
-                clipPath="url(#svg-loading-boundary)"
+                clip-path="url(#svg-loading-boundary)"
             >
                 <circle
                     cx="50"
@@ -29,7 +31,7 @@ export function IconLoading(props: JSX.IntrinsicElements["svg"]) {
                     r="35"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="10"
+                    stroke-width="10"
                 />
                 <polygon points="33,20 50,15 67,20 50,-20" />
                 <polygon

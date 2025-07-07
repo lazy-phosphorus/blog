@@ -1,31 +1,23 @@
 .notice {
     display: flex;
     position: fixed;
-    gap: calc(var(--font-size) / 4);
     flex-direction: column;
-    width: 10rem;
-    left: 0;
-    right: 0;
-    top: var(--header-height);
-    margin: {
-        left: auto;
-        right: auto;
-    }
+    right: 0.25rem;
+    bottom: 0.25rem;
+    height: min-content;
+    width: calc(var(--font-size) * 10);
+    gap: calc(var(--font-size) / 4);
     transition: {
-        property: top;
+        property: gap, width;
         duration: 0.25s;
         timing-function: ease-in-out;
     }
     > li {
-        display: flex;
-        border-radius: 0.25rem;
-        align-items: center;
-        line-height: 1;
+        width: 100%;
         position: relative;
-        overflow: hidden;
-        height: calc(var(--font-size) * 1.5);
+        height: calc(var(--font-size) * 2);
         transition: {
-            property: padding, opacity, height;
+            property: height;
             duration: 0.25s;
             timing-function: ease-in-out;
         }
@@ -33,7 +25,6 @@
             name: expand;
             duration: 0.25s;
             timing-function: ease-in-out;
-            fill-mode: forwards;
             iteration-count: 1;
         }
         @keyframes expand {
@@ -41,39 +32,117 @@
                 height: 0;
             }
             100% {
-                height: calc(var(--font-size) * 1.5);
-            }
-        }
-        &.error {
-            background-color: var(--color-error);
-            color: var(--color-error-content);
-            > .counter {
-                background-color: var(--color-error-content);
+                height: calc(var(--font-size) * 2);
             }
         }
         &.exit {
             height: 0;
-            transform: translateY(-25%);
+            > div {
+                transform: translateX(100%);
+            }
         }
-        > .counter {
+        &.error {
+            > div {
+                background-color: var(--color-error);
+                color: var(--color-error-content);
+                > .counter {
+                    background-color: var(--color-error-content);
+                }
+            }
+        }
+        &.info {
+            > div {
+                background-color: var(--color-info);
+                color: var(--color-info-content);
+                > .counter {
+                    background-color: var(--color-info-content);
+                }
+            }
+        }
+        &.success {
+            > div {
+                background-color: var(--color-success);
+                color: var(--color-success-content);
+                > .counter {
+                    background-color: var(--color-success-content);
+                }
+            }
+        }
+        &.warning {
+            > div {
+                background-color: var(--color-warning);
+                color: var(--color-warning-content);
+                > .counter {
+                    background-color: var(--color-warning-content);
+                }
+            }
+        }
+        > div {
+            display: flex;
+            border-radius: 0.25rem;
+            align-items: center;
+            line-height: 1;
             position: absolute;
-            width: 100%;
-            bottom: 0;
             left: 0;
-            height: 3px;
+            cursor: pointer;
+            bottom: 0;
+            overflow: hidden;
+            box-sizing: border-box;
+            width: 100%;
+            height: calc(var(--font-size) * 2);
+            padding-left: calc(var(--font-size) / 2);
+            transition: {
+                property:
+                    padding-left, transform, background-color, color, height;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
             animation: {
-                name: count-down;
-                duration: 5s;
-                timing-function: linear;
-                fill-mode: forwards;
+                name: slide;
+                duration: 0.25s;
+                timing-function: ease-in-out;
                 iteration-count: 1;
             }
-            @keyframes count-down {
+            @keyframes slide {
                 0% {
-                    width: 100%;
+                    transform: translateX(100%);
                 }
                 100% {
-                    width: 0;
+                    transform: translateX(0);
+                }
+            }
+            > .counter {
+                position: absolute;
+                width: 100%;
+                bottom: 0;
+                left: 0;
+                height: 3px;
+                animation: {
+                    name: count-down;
+                    duration: 5s;
+                    timing-function: linear;
+                    fill-mode: forwards;
+                    iteration-count: 1;
+                }
+                @keyframes count-down {
+                    0% {
+                        width: 100%;
+                    }
+                    100% {
+                        width: 0;
+                    }
+                }
+            }
+            > .closer {
+                position: absolute;
+                height: var(--font-size);
+                width: var(--font-size);
+                right: calc(var(--font-size) / 2);
+                cursor: pointer;
+                transition: {
+                    property: height, width, right;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
                 }
             }
         }

@@ -5,6 +5,7 @@ import { Background } from "@/components/background";
 import { Code } from "@/components/code";
 import { Notice } from "@/components/notice";
 import { dispatchExceptionEvent } from "@/events/exception";
+import { AsyncException } from "@/exception/async-exception";
 import { RuntimeException } from "@/exception/runtime-exception";
 import { Header } from "./header";
 import style from "./index.module.scss";
@@ -32,7 +33,16 @@ function handleError(this: Window, event: ErrorEvent) {
 }
 
 function handleRejection(this: Window, event: PromiseRejectionEvent) {
-    console.log(event);
+    dispatchExceptionEvent(
+        new AsyncException(
+            (
+                <p>
+                    传递给<Code type="fun">reject()</Code>函数的值为{" "}
+                    {String(event.reason)}
+                </p>
+            ),
+        ),
+    );
     event.preventDefault();
 }
 

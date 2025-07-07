@@ -25,6 +25,7 @@ export function MusicPlayer() {
 
     useEffect(() => {
         audio.current!.volume = 0.2;
+        audio.current!.play();
     }, [audio]);
 
     /* onTimeUpdate 也可以实现，但是帧率很低 */

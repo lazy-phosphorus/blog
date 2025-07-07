@@ -1,11 +1,13 @@
 import { useSignal } from "@preact/signals";
 import type { ComponentChildren, JSX } from "preact";
-import { useCallback, useEffect } from "preact/hooks";
+import { useCallback, useEffect, useRef } from "preact/hooks";
+import { Dialog } from "@/components/dialog";
 import {
     registerExceptionEventHandler,
     unregisterExceptionEventHandler,
 } from "@/events/exception";
 import type { ExceptionEventHandler } from "@/events/exception";
+import { IconClose } from "@svg/close";
 import style from "./index.module.scss";
 
 type EventType = {
@@ -17,6 +19,9 @@ type EventType = {
 
 export function Notice() {
     const events = useSignal<EventType[]>([]);
+    const dialogContent = useSignal<ComponentChildren>(void 0);
+    const closeText = useSignal<ComponentChildren>(void 0);
+    const dialogRef = useRef<HTMLDialogElement | null>(null);
 
     const exceptionHandler = useCallback<ExceptionEventHandler>(
         (event) => {
@@ -49,34 +54,93 @@ export function Notice() {
         JSX.AnimationEventHandler<HTMLDivElement>
     >(
         (event) =>
-            event.currentTarget.parentElement!.classList.add(style.exit!),
-        [events],
+            event.currentTarget.parentElement!.parentElement!.classList.add(
+                style.exit!,
+            ),
+        [],
     );
 
-    // TODO
-
     const handleRemoveNotice = useCallback(
-        (event: JSX.TargetedTransitionEvent<HTMLDivElement>, key: number) => {
-            console.log(event);
-
-            // (events.value = events.peek().filter((v) => v.timestamp !== key)),
+        (event: Event, key: number) => {
+            events.value = events.peek().filter((v) => v.timestamp !== key);
+            event.stopPropagation();
         },
         [events],
     );
 
+    const handleEventExited = useCallback(
+        (event: JSX.TargetedTransitionEvent<HTMLLIElement>, key: number) => {
+            if (event.propertyName !== "height") return;
+            handleRemoveNotice(event, key);
+        },
+        [handleRemoveNotice],
+    );
+
+    const handleOpenDialog = useCallback(
+        (
+            event: JSX.TargetedEvent<HTMLDivElement>,
+            content: ComponentChildren,
+            level: "success" | "info" | "warning" | "error",
+            key: number,
+        ) => {
+            dialogContent.value = content;
+            switch (level) {
+                case "success": {
+                    closeText.value = "やったぜ！";
+                    break;
+                }
+                case "info": {
+                    closeText.value = "我已了解此信息";
+                    break;
+                }
+                case "warning": {
+                    closeText.value = "嫌だも嫌だ、無理も無理";
+                    break;
+                }
+                case "error": {
+                    closeText.value = "你动了我的DOM树？或是万年不升级浏览器？";
+                    break;
+                }
+            }
+            dialogRef.current!.showModal();
+            handleRemoveNotice(event, key);
+        },
+        [dialogRef],
+    );
+
     return (
         <ul class={style.notice}>
-            {events.value.map(({ mini, timestamp, level }) => {
+            <Dialog ref={dialogRef} closeText={closeText}>
+                {dialogContent}
+            </Dialog>
+            {events.value.map(({ mini, full, timestamp, level }) => {
                 return (
-                    <li key={timestamp} class={style[level]}>
-                        {mini}
+                    <li
+                        key={timestamp}
+                        class={style[level]}
+                        onTransitionEnd={(e) => handleEventExited(e, timestamp)}
+                    >
                         <div
-                            class={style.counter}
-                            onAnimationEnd={handleStartTransition}
-                            onTransitionEnd={(e) =>
-                                handleRemoveNotice(e, timestamp)
+                            onClick={(e) =>
+                                handleOpenDialog(e, full, level, timestamp)
                             }
-                        />
+                        >
+                            {mini}
+                            <div
+                                class={style.counter}
+                                onAnimationEnd={handleStartTransition}
+                            />
+                            <button
+                                class={style.closer}
+                                type="button"
+                                title="关闭"
+                                onClick={(e) => {
+                                    handleRemoveNotice(e, timestamp);
+                                }}
+                            >
+                                <IconClose />
+                            </button>
+                        </div>
                     </li>
                 );
             })}

@@ -8,6 +8,7 @@
     flex-shrink: 0;
     padding: calc(var(--font-size));
     background-color: rgba(from var(--color-base-100) r g b / 0.9);
+    backdrop-filter: blur(16px);
     color: var(--color-base-content);
     transition: {
         property: padding, background-color, color;

@@ -1,0 +1,61 @@
+.dialog {
+    border: unset;
+    border-radius: 0.25rem;
+    backdrop-filter: blur(16px);
+    background-color: rgba(from var(--color-base-300) r g b / 0.9);
+    color: var(--color-base-content);
+    transition: {
+        property: background-color, color;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    h1 {
+        line-height: 1.5;
+        font-size: calc(var(--font-size) + 0.75rem);
+        font-weight: bold;
+        margin: {
+            top: calc(var(--font-size) / 2 + 0.375rem);
+            bottom: calc(var(--font-size) / 2 + 0.375rem);
+        }
+        transition: {
+            property: font-size, margin-top, margin-bottom;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+    }
+    p {
+        line-height: 1.5;
+        text-align: justify;
+        margin: {
+            top: calc(var(--font-size) / 2);
+            bottom: calc(var(--font-size) / 2);
+        }
+        transition: {
+            property: margin-top, margin-bottom;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+    }
+    > button {
+        cursor: pointer;
+        display: block;
+        width: 100%;
+        text-align: center;
+        border-radius: 0.25rem;
+        box-sizing: border-box;
+        margin-top: calc(var(--font-size) * 2);
+        background-color: var(--color-primary);
+        color: var(--color-primary-content);
+        padding: calc(var(--font-size) / 4) calc(var(--font-size) / 2);
+        transition: {
+            property: background-color, color, margin-top, padding;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        &:hover {
+            background-color: rgb(
+                from var(--color-primary) calc(r - 50) calc(g - 50) calc(b - 50)
+            );
+        }
+    }
+}

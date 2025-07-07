@@ -1,6 +1,18 @@
 .card {
-    width: fit-content;
+    width: 40rem;
+    max-width: calc(100% - 0.5rem);
     flex: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    top: var(--header-height);
+    transition: {
+        property: top;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
 }
 
 .ul {
@@ -9,8 +21,7 @@
     justify-content: center;
     align-items: center;
     gap: calc(var(--font-size) / 2) var(--font-size);
-    opacity: 0;
-    height: 0;
+    overflow: hidden;
     margin: {
         top: calc(var(--font-size) * 2);
         bottom: calc(var(--font-size) * 2);
@@ -20,21 +31,31 @@
         duration: 0.25s;
         timing-function: ease-in-out;
     }
-    animation: {
-        name: fade;
-        duration: 0.25s;
-        iteration-count: 1;
-        timing-function: ease-in-out;
-        fill-mode: forwards;
-    }
-    @keyframes fade {
-        0% {
-            opacity: 0;
-            height: 0;
+    &:not(:first-child) {
+        animation: {
+            name: fade;
+            duration: 0.25s;
+            iteration-count: 1;
+            timing-function: ease-in-out;
+            fill-mode: forwards;
         }
-        100% {
-            opacity: 100;
-            height: calc-size(auto, size);
+        @keyframes fade {
+            0% {
+                opacity: 0;
+                height: 0;
+                margin: {
+                    top: 0;
+                    bottom: 0;
+                }
+            }
+            100% {
+                opacity: 100;
+                height: calc-size(auto, size);
+                margin: {
+                    top: calc(var(--font-size) * 2);
+                    bottom: calc(var(--font-size) * 2);
+                }
+            }
         }
     }
     > li {

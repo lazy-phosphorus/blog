@@ -1,11 +1,28 @@
 .card {
-    max-width: 40rem;
+    max-width: calc(100% - 0.5rem);
+    width: 40rem;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    top: var(--header-height);
+    transition: {
+        property: top;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
     > ul {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
         align-items: center;
         gap: var(--font-size);
+        transition: {
+            property: gap;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
         > li {
             display: block;
             line-height: 1;

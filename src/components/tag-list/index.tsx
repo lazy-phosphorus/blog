@@ -1,8 +1,8 @@
+import { Link } from "@/components/link";
 import { DataConsumer } from "@/hooks/use-data";
 import { Card } from "@/layouts/card";
 import type { PostDataType } from "@/types/post-data";
 import { tagList } from "@/utils/post-statistics";
-import { Link } from "../link";
 import style from "./index.module.scss";
 
 const PostConsumer = DataConsumer<PostDataType>;

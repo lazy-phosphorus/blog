@@ -26,9 +26,11 @@
         }
     }
     > figcaption {
-        font-family: "Fira Code Variable", "Noto Serif SC Variable";
+        font-family: "LXGW WenKai";
         font-style: italic;
         text-align: center;
+        margin-top: calc(var(--font-size) / 2 - 0.125rem);
+        font-size: calc(var(--font-size) - 0.25rem);
     }
 }
 

@@ -1,0 +1,33 @@
+.loading {
+    display: none;
+    pointer-events: none;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 0.25rem;
+    transition: {
+        property: opacity;
+        duration: 0.5s;
+        timing-function: ease-in-out;
+    }
+    &.finish {
+        opacity: 0;
+        display: block;
+    }
+    > div {
+        height: 100%;
+        width: var(--width, 0%);
+        border-radius: 100vmax;
+        background-color: var(--color-secondary);
+        transition: {
+            property: background-color;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+    }
+}
+
+:global(.loading) .loading {
+    display: block;
+}

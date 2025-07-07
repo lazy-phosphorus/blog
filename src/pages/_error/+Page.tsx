@@ -1,13 +1,5 @@
-import { usePageContext } from "@/hooks/use-page-context";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export function Page() {
-    // TODO
-    const pageContext = usePageContext();
-
-    const { abortReason, abortStatusCode } = pageContext;
-    return (
-        <p>
-            {String(abortReason)}, {abortStatusCode}
-        </p>
-    );
+    return <ErrorBoundary />;
 }

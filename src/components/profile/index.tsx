@@ -34,6 +34,9 @@ export function Profile() {
                 <div class={style.avatar}>
                     <Avatar />
                 </div>
+                <h1>惰性磷</h1>
+                <q>兼容性的事情为什么总是那么糟糕？</q>
+                <hr />
                 <p>技能树：</p>
                 <ul class={style.icons}>
                     <li>
@@ -121,7 +124,7 @@ export function Profile() {
                 </ul>
                 <hr />
                 <p>
-                    此网站不考虑向后兼容。编译目标为
+                    此网站不考虑向后兼容。TypeScript 编译目标为
                     <Code type="default">esnext</Code>，CSS 使用了部分 Safari
                     不兼容属性。如果出现显示问题，请升级您的浏览器/放弃使用
                     Safari。

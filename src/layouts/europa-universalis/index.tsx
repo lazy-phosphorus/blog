@@ -3,6 +3,7 @@ import { useEffect } from "preact/hooks";
 import bg from "@/assets/image/background/00.webp";
 import { Background } from "@/components/background";
 import { Code } from "@/components/code";
+import { LoadingBar } from "@/components/loading-bar";
 import { Notice } from "@/components/notice";
 import { dispatchExceptionEvent } from "@/events/exception";
 import { AsyncException } from "@/exception/async-exception";
@@ -57,9 +58,11 @@ export function EuropaUniversalis({ children }: PropsType) {
         };
     }, []);
 
+    // TODO footer、aside
     return (
         <div class={style.eu4}>
             <Background src={bg} />
+            <LoadingBar />
             <Notice />
             <header>
                 <Header />
@@ -67,6 +70,7 @@ export function EuropaUniversalis({ children }: PropsType) {
             <div id="scroller" class={style.main}>
                 <main>{children}</main>
             </div>
+            <footer> </footer>
         </div>
     );
 }

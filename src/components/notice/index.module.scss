@@ -5,6 +5,7 @@
     right: 0.25rem;
     bottom: 0.25rem;
     height: min-content;
+    z-index: 20;
     width: calc(var(--font-size) * 10);
     gap: calc(var(--font-size) / 4);
     transition: {

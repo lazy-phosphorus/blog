@@ -5,7 +5,7 @@
     bottom: 0;
     margin: auto;
     width: 40rem;
-    max-width: 100%;
+    max-width: calc(100% - 0.5rem);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -39,6 +39,35 @@
                 property: height, background-color, border-color;
                 duration: 0.25s;
                 timing-function: ease-in-out;
+            }
+        }
+        > h1 {
+            font-weight: bold;
+            text-align: center;
+            font-size: calc(var(--font-size) + 0.75rem);
+            transition: {
+                property: font-size;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+        }
+        > q {
+            display: block;
+            text-align: center;
+            color: rgb(
+                from var(--color-base-content) calc(r - 75) calc(g - 75)
+                    calc(b - 75)
+            );
+            transition: {
+                property: color;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            @media (prefers-color-scheme: light) {
+                color: rgb(
+                    from var(--color-base-content) calc(r + 75) calc(g + 75)
+                        calc(b + 75)
+                );
             }
         }
         > p {

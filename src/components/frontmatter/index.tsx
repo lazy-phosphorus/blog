@@ -4,12 +4,12 @@ import { Tooltip } from "@/components/tooltip";
 import { Waterfall } from "@/layouts/waterfall";
 import type { FrontmatterType } from "@/types/frontmatter";
 import { date2string } from "@/utils/date2string";
+import { IconFilter } from "@svg/filter";
 import { IconTag } from "@svg/tag";
 import { IconTimer } from "@svg/timer";
 import { IconUpdate } from "@svg/update";
 import { IconUpload } from "@svg/upload";
 import { IconWord } from "@svg/word";
-import { IconFilter } from "../svg/filter";
 import style from "./index.module.scss";
 
 type PropsType = Readonly<{ frontmatter: FrontmatterType; href?: string }>;

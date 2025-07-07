@@ -58,7 +58,6 @@ export function MusicPlayer() {
     const handleTogglePlay = useCallback(() => {
         if (audio.current!.paused) audio.current!.play();
         else audio.current!.pause();
-        audio.current!.play();
     }, [audio]);
 
     const handleNext = useCallback(

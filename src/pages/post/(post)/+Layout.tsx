@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { Frontmatter } from "@/components/frontmatter";
 import { MdxProvider } from "@/components/mdx-provider";
+import { Toc } from "@/components/toc";
 import { PageContextConsumer } from "@/hooks/use-page-context";
 import { Paper } from "@/layouts/paper";
 import type { PostDataType } from "@/types/post-data";
@@ -24,6 +25,7 @@ export function Layout({ children }: PropsType) {
                 </PageContextConsumer>
                 {children}
             </Paper>
+            <Toc />
         </MdxProvider>
     );
 }

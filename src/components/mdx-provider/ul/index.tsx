@@ -1,6 +1,8 @@
-import type { ParentProps } from "solid-js";
+import type { ComponentChildren } from "preact";
 import style from "./index.module.scss";
 
-export function ul(props: ParentProps) {
-    return <ul class={style.ul}>{props.children}</ul>;
+type PropsType = Readonly<{ children: ComponentChildren }>;
+
+export function ul({ children }: PropsType) {
+    return <ul class={style.ul}>{children}</ul>;
 }

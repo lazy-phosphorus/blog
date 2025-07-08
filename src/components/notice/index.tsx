@@ -109,41 +109,45 @@ export function Notice() {
     );
 
     return (
-        <ul class={style.notice}>
+        <>
             <Dialog ref={dialogRef} closeText={closeText}>
                 {dialogContent}
             </Dialog>
-            {events.value.map(({ mini, full, timestamp, level }) => {
-                return (
-                    <li
-                        key={timestamp}
-                        class={style[level]}
-                        onTransitionEnd={(e) => handleEventExited(e, timestamp)}
-                    >
-                        <div
-                            onClick={(e) =>
-                                handleOpenDialog(e, full, level, timestamp)
+            <ul class={style.notice}>
+                {events.value.map(({ mini, full, timestamp, level }) => {
+                    return (
+                        <li
+                            key={timestamp}
+                            class={style[level]}
+                            onTransitionEnd={(e) =>
+                                handleEventExited(e, timestamp)
                             }
                         >
-                            {mini}
                             <div
-                                class={style.counter}
-                                onAnimationEnd={handleStartTransition}
-                            />
-                            <button
-                                class={style.closer}
-                                type="button"
-                                title="关闭"
-                                onClick={(e) => {
-                                    handleRemoveNotice(e, timestamp);
-                                }}
+                                onClick={(e) =>
+                                    handleOpenDialog(e, full, level, timestamp)
+                                }
                             >
-                                <IconClose />
-                            </button>
-                        </div>
-                    </li>
-                );
-            })}
-        </ul>
+                                {mini}
+                                <div
+                                    class={style.counter}
+                                    onAnimationEnd={handleStartTransition}
+                                />
+                                <button
+                                    class={style.closer}
+                                    type="button"
+                                    title="关闭"
+                                    onClick={(e) => {
+                                        handleRemoveNotice(e, timestamp);
+                                    }}
+                                >
+                                    <IconClose />
+                                </button>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
+        </>
     );
 }

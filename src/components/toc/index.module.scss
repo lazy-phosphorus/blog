@@ -1,0 +1,98 @@
+@use "@/assets/scss/variables.scss" as v;
+
+.toc {
+    width: calc(var(--font-size) * 10);
+    position: fixed;
+    right: 0.25rem;
+    height: 75%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 0.25rem;
+    height: min-content;
+    max-height: calc((100% - var(--header-height)) * 0.75);
+    top: var(--header-height);
+    background-color: var(--color-base-300);
+    color: var(--color-base-content);
+    padding: calc(var(--font-size) / 2) var(--font-size);
+    transition: {
+        property: top, max-height, background-color, color, padding, transform;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    animation: {
+        name: slide;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+        iteration-count: 1;
+        fill-mode: forwards;
+    }
+    @media screen and (max-width: v.$screen-3xl) {
+        top: calc(var(--header-height) + 0.25rem);
+    }
+    &.closed {
+        transform: translateX(calc(100% - var(--font-size) - 0.5rem));
+        .svg {
+            transform: rotateZ(180deg);
+        }
+    }
+    > button {
+        cursor: pointer;
+        position: absolute;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        left: 0;
+        top: 0;
+        border-bottom-right-radius: 0.25rem;
+        width: calc(var(--font-size) + 0.5rem);
+        height: calc(var(--font-size) + 0.5rem);
+        background-color: var(--color-primary);
+        color: var(--color-primary-content);
+        transition: {
+            property: width, height, background-color, color;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        &:hover {
+            background-color: rgb(
+                from var(--color-primary) calc(r - 50) calc(g - 50) calc(b - 50)
+            );
+        }
+        .svg {
+            transition: {
+                property: transform;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+        }
+    }
+    > h1 {
+        text-align: center;
+        font-size: calc(var(--font-size) + 0.25rem);
+        font-weight: bold;
+    }
+    > ul {
+        overflow-x: hidden;
+        display: block;
+        ul {
+            display: block;
+            margin-left: var(--font-size);
+            transition: {
+                property: margin-left;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+        }
+        li {
+            display: block;
+            overflow: hidden;
+            > a {
+                overflow: hidden;
+                display: block;
+                text-overflow: ellipsis;
+                word-break: keep-all;
+                white-space: nowrap;
+            }
+        }
+    }
+}

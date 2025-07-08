@@ -2,6 +2,7 @@ import { Frontmatter } from "@/components/frontmatter";
 import { usePageContext } from "@/hooks/use-page-context";
 import { Card } from "@/layouts/card";
 import type { PostDataType } from "@/types/post-data";
+import { draftFilter } from "@/utils/draft-filter";
 import style from "./index.module.scss";
 
 function publishDateDesc(
@@ -20,7 +21,7 @@ export function PostBrowser() {
     const tag = urlParsed.search.tag;
     return (
         <>
-            {data.posts
+            {draftFilter(data.posts)
                 .toSorted(publishDateDesc)
                 .filter(({ frontmatter }) => {
                     let result = true;

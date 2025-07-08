@@ -65,6 +65,10 @@ body {
     }
 }
 
+#scroller::-webkit-scrollbar {
+    display: none;
+}
+
 code {
     font-family:
         "Fira Code Variable", monospace, "Noto Sans SC Variable", "LXGW WenKai",

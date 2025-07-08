@@ -17,6 +17,7 @@ import media from "rehype-mdx-import-media";
 import unwrap from "rehype-unwrap-images";
 import gfm from "remark-gfm";
 import math from "remark-math";
+import { remarkMdxToc } from "remark-mdx-toc";
 import pangu from "remark-pangu";
 import readingTime from "remark-reading-time";
 import readingTimeMdx from "remark-reading-time/mdx";
@@ -33,6 +34,7 @@ export default defineConfig({
                 pangu,
                 gfm,
                 math,
+                remarkMdxToc as () => void,
                 codetab,
                 readingTime,
                 readingTimeMdx,

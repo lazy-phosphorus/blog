@@ -6,6 +6,7 @@ import { DataConsumer } from "@/hooks/use-data";
 import { Card } from "@/layouts/card";
 import type { CategoryType } from "@/types/category";
 import type { PostDataType } from "@/types/post-data";
+import { draftFilter } from "@/utils/draft-filter";
 import { categoryTree } from "@/utils/post-statistics";
 import style from "./index.module.scss";
 
@@ -58,7 +59,7 @@ export function CategoryTree() {
     return (
         <PostConsumer>
             {({ posts }) => {
-                const { tree, counter } = categoryTree(posts);
+                const { tree, counter } = categoryTree(draftFilter(posts));
                 return (
                     <Card class={style.card}>
                         <CategoryList

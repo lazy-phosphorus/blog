@@ -2,6 +2,7 @@ import { Link } from "@/components/link";
 import { DataConsumer } from "@/hooks/use-data";
 import { Card } from "@/layouts/card";
 import type { PostDataType } from "@/types/post-data";
+import { draftFilter } from "@/utils/draft-filter";
 import { tagList } from "@/utils/post-statistics";
 import style from "./index.module.scss";
 
@@ -11,7 +12,7 @@ export function TagList() {
     return (
         <PostConsumer>
             {({ posts }) => {
-                const tags = tagList(posts);
+                const tags = tagList(draftFilter(posts));
                 return (
                     <Card class={style.card}>
                         <ul>

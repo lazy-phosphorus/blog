@@ -58,7 +58,7 @@ export function EuropaUniversalis({ children }: PropsType) {
         };
     }, []);
 
-    // TODO footer、aside
+    // TODO footer
     return (
         <div class={style.eu4}>
             <Background src={bg} />

@@ -2,6 +2,7 @@ import { Badge } from "@/components/badge";
 import { Tooltip } from "@/components/tooltip";
 import { useData } from "@/hooks/use-data";
 import type { PostDataType } from "@/types/post-data";
+import { draftFilter } from "@/utils/draft-filter";
 import { IconFilter } from "@svg/filter";
 import { IconPost } from "@svg/post";
 import { IconTag } from "@svg/tag";
@@ -36,7 +37,8 @@ function wordCount(posts: PostDataType["posts"]) {
 }
 
 export function Status() {
-    const { posts } = useData<PostDataType>();
+    const { posts: originPosts } = useData<PostDataType>();
+    const posts = draftFilter(originPosts);
 
     return (
         <div class={style.status}>

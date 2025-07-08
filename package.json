@@ -40,6 +40,7 @@
         "rehype-unwrap-images": "^1.0.0",
         "remark-gfm": "^4.0.1",
         "remark-math": "^6.0.0",
+        "remark-mdx-toc": "^0.3.1",
         "remark-pangu": "^2.2.0",
         "remark-reading-time": "^2.0.2",
         "sass": "^1.89.2",

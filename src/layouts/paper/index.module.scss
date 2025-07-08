@@ -2,7 +2,7 @@
 
 :root {
     --paper-padding: 4rem;
-    @media screen and (max-width: v.$screen-3xl) {
+    @media screen and (max-width: v.$screen-4xl) {
         --paper-padding: 3.5rem;
     }
     @media screen and (max-width: v.$screen-2xl) {

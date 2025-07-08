@@ -11,7 +11,7 @@
         duration: 0.25s;
         timing-function: ease-in-out;
     }
-    @media screen and (max-width: v.$screen-3xl) {
+    @media screen and (max-width: v.$screen-4xl) {
         background-color: transparent;
     }
     > audio {
@@ -40,7 +40,7 @@
             duration: 0.25s;
             timing-function: ease-in-out;
         }
-        @media screen and (max-width: v.$screen-3xl) {
+        @media screen and (max-width: v.$screen-4xl) {
             margin: 0;
         }
         > .metadata {
@@ -62,7 +62,7 @@
                     opacity: 100;
                 }
             }
-            @media screen and (max-width: v.$screen-3xl) {
+            @media screen and (max-width: v.$screen-4xl) {
                 display: none;
                 margin: 0;
             }
@@ -96,7 +96,7 @@
                 duration: 0.25s;
                 timing-function: ease-in-out;
             }
-            @media screen and (max-width: v.$screen-3xl) {
+            @media screen and (max-width: v.$screen-4xl) {
                 display: flex;
                 height: 100%;
                 font-size: calc(var(--font-size) + 1.25rem);
@@ -134,7 +134,7 @@
                 duration: 0.25s;
                 timing-function: ease-in-out;
             }
-            @media screen and (max-width: v.$screen-3xl) {
+            @media screen and (max-width: v.$screen-4xl) {
                 display: none;
             }
             > div {

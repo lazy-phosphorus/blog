@@ -33,7 +33,7 @@
         --color-base-content: #212121;
     }
 
-    @media screen and (max-width: v.$screen-3xl) {
+    @media screen and (max-width: v.$screen-4xl) {
         --font-size: #{v.$text-lg};
     }
     @media screen and (max-width: v.$screen-xl) {

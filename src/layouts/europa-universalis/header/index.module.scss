@@ -3,7 +3,7 @@
 .pcleft {
     height: 100%;
     display: flex;
-    @media screen and (max-width: v.$screen-3xl) {
+    @media screen and (max-width: v.$screen-4xl) {
         display: none;
     }
     > button {
@@ -63,7 +63,7 @@
 
 .mbleft {
     display: none;
-    @media screen and (max-width: v.$screen-3xl) {
+    @media screen and (max-width: v.$screen-4xl) {
         display: block;
     }
 }

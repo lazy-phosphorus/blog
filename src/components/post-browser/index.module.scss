@@ -1,6 +1,8 @@
 .postcard {
     opacity: 0;
     transform: translateY(12.5%);
+    height: auto;
+    display: flex;
     max-width: calc(var(--font-size) * 40);
     transition: {
         property: max-width;

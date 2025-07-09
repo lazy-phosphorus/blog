@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { batch, useSignal } from "@preact/signals";
 import type { ComponentChildren, JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { Dialog } from "@/components/dialog";
@@ -85,25 +85,28 @@ export function Notice() {
             level: "success" | "info" | "warning" | "error",
             key: symbol,
         ) => {
-            dialogContent.value = content;
-            switch (level) {
-                case "success": {
-                    closeText.value = "やったぜ！";
-                    break;
+            batch(() => {
+                dialogContent.value = content;
+                switch (level) {
+                    case "success": {
+                        closeText.value = "やったぜ！";
+                        break;
+                    }
+                    case "info": {
+                        closeText.value = "我已了解此信息";
+                        break;
+                    }
+                    case "warning": {
+                        closeText.value = "嫌だも嫌だ、無理も無理";
+                        break;
+                    }
+                    case "error": {
+                        closeText.value =
+                            "你动了我的DOM树？或是万年不升级浏览器？";
+                        break;
+                    }
                 }
-                case "info": {
-                    closeText.value = "我已了解此信息";
-                    break;
-                }
-                case "warning": {
-                    closeText.value = "嫌だも嫌だ、無理も無理";
-                    break;
-                }
-                case "error": {
-                    closeText.value = "你动了我的DOM树？或是万年不升级浏览器？";
-                    break;
-                }
-            }
+            });
             dialogRef.current!.showModal();
             handleRemoveNotice(event, key);
         },

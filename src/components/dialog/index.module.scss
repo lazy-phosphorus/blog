@@ -12,6 +12,21 @@
         duration: 0.25s;
         timing-function: ease-in-out;
     }
+    animation: {
+        name: fade;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+        iteration-count: 1;
+        fill-mode: forwards;
+    }
+    @keyframes fade {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 100;
+        }
+    }
     &::backdrop {
         backdrop-filter: blur(8px);
     }

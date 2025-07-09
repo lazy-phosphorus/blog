@@ -14,7 +14,8 @@ type EventType = {
     level: "success" | "info" | "warning" | "error";
     mini: ComponentChildren;
     full: ComponentChildren;
-    timestamp: number;
+    timestamp: Date;
+    key: symbol;
 };
 
 export function Notice() {
@@ -36,7 +37,8 @@ export function Notice() {
                             {event.exception.Message}
                         </div>
                     ),
-                    timestamp: event.timestamp.getTime(),
+                    timestamp: event.timestamp,
+                    key: Symbol(),
                 },
             ];
         },
@@ -61,15 +63,15 @@ export function Notice() {
     );
 
     const handleRemoveNotice = useCallback(
-        (event: Event, key: number) => {
-            events.value = events.peek().filter((v) => v.timestamp !== key);
+        (event: Event, key: symbol) => {
+            events.value = events.peek().filter((v) => v.key !== key);
             event.stopPropagation();
         },
         [events],
     );
 
     const handleEventExited = useCallback(
-        (event: JSX.TargetedTransitionEvent<HTMLLIElement>, key: number) => {
+        (event: JSX.TargetedTransitionEvent<HTMLLIElement>, key: symbol) => {
             if (event.propertyName !== "height") return;
             handleRemoveNotice(event, key);
         },
@@ -81,7 +83,7 @@ export function Notice() {
             event: JSX.TargetedEvent<HTMLDivElement>,
             content: ComponentChildren,
             level: "success" | "info" | "warning" | "error",
-            key: number,
+            key: symbol,
         ) => {
             dialogContent.value = content;
             switch (level) {
@@ -114,18 +116,16 @@ export function Notice() {
                 {dialogContent}
             </Dialog>
             <ul class={style.notice}>
-                {events.value.map(({ mini, full, timestamp, level }) => {
+                {events.value.map(({ mini, full, key, level }) => {
                     return (
                         <li
-                            key={timestamp}
+                            key={key}
                             class={style[level]}
-                            onTransitionEnd={(e) =>
-                                handleEventExited(e, timestamp)
-                            }
+                            onTransitionEnd={(e) => handleEventExited(e, key)}
                         >
                             <div
                                 onClick={(e) =>
-                                    handleOpenDialog(e, full, level, timestamp)
+                                    handleOpenDialog(e, full, level, key)
                                 }
                             >
                                 {mini}
@@ -138,7 +138,7 @@ export function Notice() {
                                     type="button"
                                     title="关闭"
                                     onClick={(e) => {
-                                        handleRemoveNotice(e, timestamp);
+                                        handleRemoveNotice(e, key);
                                     }}
                                 >
                                     <IconClose />

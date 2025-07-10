@@ -1,12 +1,27 @@
 import type { ComponentChildren, JSX } from "preact";
-import { forwardRef } from "preact/compat";
-import { useCallback } from "preact/hooks";
+import type { Ref } from "preact";
+import { useCallback, useImperativeHandle, useRef } from "preact/hooks";
 import style from "./index.module.scss";
 
-export const Dialog = forwardRef<
-    HTMLDialogElement,
-    JSX.IntrinsicElements["dialog"] & { closeText: ComponentChildren }
->(({ children, closeText, ...props }, ref) => {
+type AdditionalPropsType = {
+    closeText: ComponentChildren;
+    dialogRef: Ref<{ showModal: () => void } | null>;
+};
+
+export function Dialog({
+    children,
+    closeText,
+    dialogRef,
+    ...props
+}: JSX.IntrinsicElements["dialog"] & AdditionalPropsType) {
+    const dialog = useRef<HTMLDialogElement | null>(null);
+
+    useImperativeHandle(dialogRef, () => {
+        return dialog.current === null
+            ? null
+            : { showModal: dialog.current.showModal.bind(dialog.current) };
+    }, [dialog]);
+
     const handleClose = useCallback<JSX.MouseEventHandler<HTMLButtonElement>>(
         (event) => {
             const dialog = event.currentTarget
@@ -19,7 +34,7 @@ export const Dialog = forwardRef<
     return (
         <dialog
             {...props}
-            ref={ref}
+            ref={dialog}
             class={`${style.dialog}${props.class !== void 0 ? ` ${props.class}` : ""}`}
         >
             {children}
@@ -28,4 +43,4 @@ export const Dialog = forwardRef<
             </button>
         </dialog>
     );
-});
+}

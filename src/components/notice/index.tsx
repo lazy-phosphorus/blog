@@ -22,7 +22,7 @@ export function Notice() {
     const events = useSignal<EventType[]>([]);
     const dialogContent = useSignal<ComponentChildren>(void 0);
     const closeText = useSignal<ComponentChildren>(void 0);
-    const dialogRef = useRef<HTMLDialogElement | null>(null);
+    const dialogRef = useRef<{ showModal: () => void } | null>(null);
 
     const exceptionHandler = useCallback<ExceptionEventHandler>(
         (event) => {
@@ -115,7 +115,7 @@ export function Notice() {
 
     return (
         <>
-            <Dialog ref={dialogRef} closeText={closeText}>
+            <Dialog dialogRef={dialogRef} closeText={closeText}>
                 {dialogContent}
             </Dialog>
             <ul class={style.notice}>

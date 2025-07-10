@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="100"
+   height="100"
+   viewBox="0 0 26.458335 26.458333"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="chess-piece.svg"
+   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="4.0095808"
+     inkscape:cx="40.527927"
+     inkscape:cy="73.94788"
+     inkscape:window-width="1800"
+     inkscape:window-height="1126"
+     inkscape:window-x="0"
+     inkscape:window-y="43"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg1" />
+  <defs
+     id="defs1" />
+  <circle
+     style="fill:#ecf0f1;stroke:#000000;stroke-width:0.661831;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1"
+     id="path1"
+     cx="13.229167"
+     cy="13.236614"
+     r="12.898252"
+     inkscape:label="棋子" />
+</svg>

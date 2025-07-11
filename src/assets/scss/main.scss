@@ -1,6 +1,5 @@
 @use "@fontsource-variable/fira-code";
 @use "@fontsource-variable/noto-sans-sc";
-@use "@fontsource/lxgw-wenkai";
 @use "@fontsource-variable/noto-serif-sc";
 @use "@/assets/scss/variables.scss" as v;
 
@@ -52,8 +51,8 @@ body {
     width: 100vw;
     height: 100vh;
     font-family:
-        "Fira Code Variable", "Noto Sans SC Variable", "LXGW WenKai",
-        "Noto Serif SC Variable", sans-serif, serif, monospace, cursive;
+        "Fira Code Variable", "Noto Sans SC Variable", "Noto Serif SC Variable",
+        sans-serif, serif, monospace, cursive;
     margin: unset;
     background-color: var(--color-base-200);
     color: var(--color-base-content);
@@ -71,7 +70,7 @@ body {
 
 code {
     font-family:
-        "Fira Code Variable", monospace, "Noto Sans SC Variable", "LXGW WenKai",
+        "Fira Code Variable", monospace, "Noto Sans SC Variable",
         "Noto Serif SC Variable", sans-serif, serif, cursive;
 }
 

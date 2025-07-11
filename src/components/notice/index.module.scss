@@ -112,6 +112,9 @@
                     transform: translateX(0);
                 }
             }
+            &.plain {
+                cursor: default;
+            }
             > .counter {
                 position: absolute;
                 width: 100%;
@@ -120,7 +123,7 @@
                 height: 3px;
                 animation: {
                     name: count-down;
-                    duration: 5s;
+                    duration: var(--duration, 5s);
                     timing-function: linear;
                     fill-mode: forwards;
                     iteration-count: 1;
@@ -132,6 +135,10 @@
                     100% {
                         width: 0;
                     }
+                }
+                &.infinite {
+                    animation: unset;
+                    display: none;
                 }
             }
             > .closer {

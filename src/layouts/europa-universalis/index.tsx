@@ -1,19 +1,24 @@
 import type { ComponentChildren } from "preact";
-import { useEffect } from "preact/hooks";
+import { useCallback, useEffect } from "preact/hooks";
 import bg from "@/assets/image/background/00.webp";
 import { Background } from "@/components/background";
 import { Code } from "@/components/code";
+import { ControlPanel } from "@/components/control-panel";
 import { LoadingBar } from "@/components/loading-bar";
 import { Notice } from "@/components/notice";
 import { dispatchExceptionEvent } from "@/events/exception";
 import { AsyncException } from "@/exception/async-exception";
 import { RuntimeException } from "@/exception/runtime-exception";
+import { isControlPanelVisible } from "@/signals/is-control-panel-visible";
 import { Header } from "./header";
 import style from "./index.module.scss";
 
 type PropsType = Readonly<{ children: ComponentChildren }>;
 
 function handleError(this: Window, event: ErrorEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
     dispatchExceptionEvent(
         new RuntimeException(
             (
@@ -30,10 +35,12 @@ function handleError(this: Window, event: ErrorEvent) {
             ),
         ),
     );
-    event.preventDefault();
 }
 
 function handleRejection(this: Window, event: PromiseRejectionEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
     dispatchExceptionEvent(
         new AsyncException(
             (
@@ -44,7 +51,6 @@ function handleRejection(this: Window, event: PromiseRejectionEvent) {
             ),
         ),
     );
-    event.preventDefault();
 }
 
 export function EuropaUniversalis({ children }: PropsType) {
@@ -58,6 +64,10 @@ export function EuropaUniversalis({ children }: PropsType) {
         };
     }, []);
 
+    const handleAvatarClick = useCallback(() => {
+        isControlPanelVisible.value = !isControlPanelVisible.peek();
+    }, []);
+
     // TODO footer
     return (
         <div class={style.eu4}>
@@ -65,11 +75,12 @@ export function EuropaUniversalis({ children }: PropsType) {
             <LoadingBar />
             <Notice />
             <header>
-                <Header />
+                <Header onAvatarClick={handleAvatarClick} />
             </header>
             <div id="scroller" class={style.main}>
                 <main>{children}</main>
             </div>
+            <ControlPanel />
             <footer> </footer>
         </div>
     );

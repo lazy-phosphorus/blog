@@ -1,30 +1,31 @@
 @use "@/assets/scss/variables.scss" as v;
 
 .toc {
-    width: calc(var(--font-size) * 10);
     position: fixed;
     right: 0.25rem;
-    height: 75%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    border-radius: 0.25rem;
-    height: min-content;
-    max-height: calc((100% - var(--header-height)) * 0.75);
+    width: calc(var(--font-size) * 12);
+    height: calc((100% - var(--header-height)) * 0.75);
     top: var(--header-height);
-    background-color: var(--color-base-300);
     color: var(--color-base-content);
-    padding: calc(var(--font-size) / 2) var(--font-size);
     transition: {
-        property: top, max-height, background-color, color, padding, transform;
+        property: width, height, top, color, transform;
         duration: 0.25s;
         timing-function: ease-in-out;
     }
     animation: {
-        name: slide;
+        name: fade;
         duration: 0.25s;
         timing-function: ease-in-out;
         iteration-count: 1;
         fill-mode: forwards;
+    }
+    @keyframes fade {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 100;
+        }
     }
     @media screen and (max-width: v.$screen-4xl) {
         top: calc(var(--header-height) + 0.25rem);
@@ -44,6 +45,7 @@
         left: 0;
         top: 0;
         border-bottom-right-radius: 0.25rem;
+        border-top-left-radius: 0.25rem;
         width: calc(var(--font-size) + 0.5rem);
         height: calc(var(--font-size) + 0.5rem);
         background-color: var(--color-primary);
@@ -66,32 +68,51 @@
             }
         }
     }
-    > h1 {
-        text-align: center;
-        font-size: calc(var(--font-size) + 0.25rem);
-        font-weight: bold;
-    }
-    > ul {
-        overflow-x: hidden;
-        display: block;
-        ul {
-            display: block;
-            margin-left: var(--font-size);
-            transition: {
-                property: margin-left;
-                duration: 0.25s;
-                timing-function: ease-in-out;
-            }
+    > div {
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        max-height: 100%;
+        height: min-content;
+        border-radius: 0.25rem;
+        background-color: var(--color-base-300);
+        padding: calc(var(--font-size) / 2) var(--font-size);
+        overflow: {
+            y: auto;
+            x: hidden;
         }
-        li {
+        transition: {
+            property: background-color, padding;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > h1 {
+            text-align: center;
+            font-size: calc(var(--font-size) + 0.25rem);
+            font-weight: bold;
+        }
+        > ul {
+            overflow-x: hidden;
             display: block;
-            overflow: hidden;
-            > a {
-                overflow: hidden;
+            ul {
                 display: block;
-                text-overflow: ellipsis;
-                word-break: keep-all;
-                white-space: nowrap;
+                margin-left: var(--font-size);
+                transition: {
+                    property: margin-left;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
+                }
+            }
+            li {
+                display: block;
+                overflow: hidden;
+                > a {
+                    overflow: hidden;
+                    display: block;
+                    text-overflow: ellipsis;
+                    word-break: keep-all;
+                    white-space: nowrap;
+                }
             }
         }
     }

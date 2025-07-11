@@ -1,11 +1,9 @@
 @use "@/assets/scss/variables.scss" as v;
 
-.pcleft {
+.left {
     height: 100%;
     display: flex;
-    @media screen and (max-width: v.$screen-4xl) {
-        display: none;
-    }
+
     > button {
         pointer-events: all;
         cursor: pointer;
@@ -50,6 +48,9 @@
     }
     > div {
         height: 100%;
+        @media screen and (max-width: v.$screen-4xl) {
+            display: none;
+        }
         > div {
             height: 50%;
             display: flex;

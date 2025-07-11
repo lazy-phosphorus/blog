@@ -7,15 +7,21 @@ import {
     unregisterExceptionEventHandler,
 } from "@/events/exception";
 import type { ExceptionEventHandler } from "@/events/exception";
+import {
+    registerSuccessEventHandler,
+    unregisterSuccessEventHandler,
+} from "@/events/success";
+import type { SuccessEventHandler } from "@/events/success";
 import { IconClose } from "@svg/close";
 import style from "./index.module.scss";
 
 type EventType = {
     level: "success" | "info" | "warning" | "error";
     mini: ComponentChildren;
-    full: ComponentChildren;
+    full?: ComponentChildren;
     timestamp: Date;
     key: symbol;
+    duration?: number;
 };
 
 export function Notice() {
@@ -45,37 +51,51 @@ export function Notice() {
         [events],
     );
 
-    useEffect(() => {
-        registerExceptionEventHandler(exceptionHandler);
-        return () => {
-            unregisterExceptionEventHandler(exceptionHandler);
-        };
-    }, [exceptionHandler]);
-
-    const handleStartTransition = useCallback<
-        JSX.AnimationEventHandler<HTMLDivElement>
-    >(
-        (event) =>
-            event.currentTarget.parentElement!.parentElement!.classList.add(
-                style.exit!,
-            ),
-        [],
-    );
-
-    const handleRemoveNotice = useCallback(
-        (event: Event, key: symbol) => {
-            events.value = events.peek().filter((v) => v.key !== key);
-            event.stopPropagation();
+    const successHandler = useCallback<SuccessEventHandler>(
+        (event) => {
+            events.value = [
+                ...events.peek(),
+                {
+                    level: "success",
+                    mini: event.text,
+                    timestamp: event.timestamp,
+                    key: Symbol(),
+                    duration: 5,
+                },
+            ];
         },
         [events],
     );
 
-    const handleEventExited = useCallback(
+    useEffect(() => {
+        registerExceptionEventHandler(exceptionHandler);
+        registerSuccessEventHandler(successHandler);
+        return () => {
+            unregisterExceptionEventHandler(exceptionHandler);
+            unregisterSuccessEventHandler(successHandler);
+        };
+    }, [exceptionHandler]);
+
+    const handleStartExit = useCallback(
+        (event: JSX.TargetedEvent<HTMLDivElement | HTMLButtonElement>) => {
+            event.stopPropagation();
+
+            event.currentTarget.parentElement!.parentElement!.classList.add(
+                style.exit!,
+            );
+        },
+        [],
+    );
+
+    const handleExited = useCallback(
         (event: JSX.TargetedTransitionEvent<HTMLLIElement>, key: symbol) => {
             if (event.propertyName !== "height") return;
-            handleRemoveNotice(event, key);
+
+            event.stopPropagation();
+
+            events.value = events.peek().filter((v) => v.key !== key);
         },
-        [handleRemoveNotice],
+        [events],
     );
 
     const handleOpenDialog = useCallback(
@@ -83,7 +103,6 @@ export function Notice() {
             event: JSX.TargetedEvent<HTMLDivElement>,
             content: ComponentChildren,
             level: "success" | "info" | "warning" | "error",
-            key: symbol,
         ) => {
             batch(() => {
                 dialogContent.value = content;
@@ -108,7 +127,7 @@ export function Notice() {
                 }
             });
             dialogRef.current!.showModal();
-            handleRemoveNotice(event, key);
+            event.currentTarget!.parentElement!.classList.add(style.exit!);
         },
         [dialogRef],
     );
@@ -119,37 +138,41 @@ export function Notice() {
                 {dialogContent}
             </Dialog>
             <ul class={style.notice}>
-                {events.value.map(({ mini, full, key, level }) => {
-                    return (
-                        <li
-                            key={key}
-                            class={style[level]}
-                            onTransitionEnd={(e) => handleEventExited(e, key)}
+                {events.value.map(({ mini, full, key, level, duration }) => (
+                    <li
+                        key={key}
+                        class={style[level]}
+                        onTransitionEnd={(e) => handleExited(e, key)}
+                    >
+                        <div
+                            class={full === void 0 ? style.plain : void 0}
+                            onClick={
+                                full === void 0
+                                    ? void 0
+                                    : (e) => handleOpenDialog(e, full, level)
+                            }
                         >
+                            {mini}
                             <div
-                                onClick={(e) =>
-                                    handleOpenDialog(e, full, level, key)
+                                class={`${style.counter}${duration === void 0 ? ` ${style.infinite}` : ""}`}
+                                style={
+                                    duration === void 0
+                                        ? void 0
+                                        : { "--duration": `${duration}s` }
                                 }
+                                onAnimationEnd={handleStartExit}
+                            />
+                            <button
+                                class={style.closer}
+                                type="button"
+                                title="关闭"
+                                onClick={handleStartExit}
                             >
-                                {mini}
-                                <div
-                                    class={style.counter}
-                                    onAnimationEnd={handleStartTransition}
-                                />
-                                <button
-                                    class={style.closer}
-                                    type="button"
-                                    title="关闭"
-                                    onClick={(e) => {
-                                        handleRemoveNotice(e, key);
-                                    }}
-                                >
-                                    <IconClose />
-                                </button>
-                            </div>
-                        </li>
-                    );
-                })}
+                                <IconClose />
+                            </button>
+                        </div>
+                    </li>
+                ))}
             </ul>
         </>
     );

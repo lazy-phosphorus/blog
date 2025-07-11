@@ -68,8 +68,10 @@ export function Toc() {
             >
                 <IconForward class={style.svg} />
             </button>
-            <h1>目录</h1>
-            <Tree toc={toc} />
+            <div>
+                <h1>目录</h1>
+                <Tree toc={toc} />
+            </div>
         </aside>
     );
 }

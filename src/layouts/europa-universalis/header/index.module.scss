@@ -3,16 +3,17 @@
 .left {
     height: 100%;
     display: flex;
-
     > button {
         pointer-events: all;
         cursor: pointer;
         border-radius: 50%;
-        background-color: var(--color-primary);
-        margin-right: calc(var(--font-size) / 2);
+        aspect-ratio: 1 / 1;
         position: relative;
         display: block;
         overflow: hidden;
+        height: 100%;
+        background-color: var(--color-primary);
+        margin-right: calc(var(--font-size) / 2);
         transition: {
             property: background-color, margin-right;
             duration: 0.25s;

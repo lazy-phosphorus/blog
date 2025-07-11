@@ -123,6 +123,7 @@ export function ControlPanel() {
                 <h1>控制面板</h1>
                 <form
                     ref={formRef}
+                    id="control-panel-form-config"
                     name="config"
                     onInput={handleInput}
                     onSubmit={handleSaveConfig}
@@ -147,23 +148,31 @@ export function ControlPanel() {
                             </div>
                         ))}
                     </div>
-                    <div class={style.buttons}>
-                        <button type="submit" title="保存配置">
-                            保存配置
-                        </button>
-                        <button type="reset" title="撤销更改">
-                            撤销更改
-                        </button>
-                        <button
-                            type="button"
-                            title="恢复默认"
-                            onClick={handleResetToDefault}
-                        >
-                            读取默认
-                        </button>
-                    </div>
                 </form>
             </Card>
+            <div class={style.buttons}>
+                <button
+                    type="submit"
+                    title="保存配置"
+                    form="control-panel-form-config"
+                >
+                    保存配置
+                </button>
+                <button
+                    type="reset"
+                    title="撤销更改"
+                    form="control-panel-form-config"
+                >
+                    撤销更改
+                </button>
+                <button
+                    type="button"
+                    title="恢复默认"
+                    onClick={handleResetToDefault}
+                >
+                    读取默认
+                </button>
+            </div>
         </aside>
     );
 }

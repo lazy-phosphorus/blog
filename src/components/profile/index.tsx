@@ -19,11 +19,14 @@ import { IconNoSmoking } from "@svg/no-smoking";
 import { IconNoWine } from "@svg/no-wine";
 import { IconOtaku } from "@svg/otaku";
 import { IconPowershell } from "@svg/powershell";
+import { IconPreact } from "@svg/preact";
 import { IconProtest } from "@svg/protest";
 import { IconPython } from "@svg/python";
 import { IconRust } from "@svg/rust";
+import { IconScss } from "@svg/scss";
 import { IconTsx } from "@svg/tsx";
 import { IconTypeScript } from "@svg/typescript";
+import { IconVite } from "@svg/vite";
 import { IconVue } from "@svg/vue";
 import style from "./index.module.scss";
 
@@ -124,11 +127,20 @@ export function Profile() {
                 </ul>
                 <hr />
                 <p>
-                    此网站不考虑向后兼容。TypeScript 编译目标为
+                    此网站编译时不考虑兼容性。TypeScript 编译目标为
                     <Code type="default">esnext</Code>，CSS 使用了部分 Safari
-                    不兼容属性。如果出现显示问题，请升级您的浏览器/放弃使用
-                    Safari。
+                    不兼容属性。如果出现问题，请升级您的浏览器/放弃使用
+                    Safari。一般而言，Firefox 不会出现大问题。
                 </p>
+                <hr />
+                <div class={style.powered}>
+                    <span>Powered by</span>
+                    <IconPreact />
+                    <span>+</span>
+                    <IconScss />
+                    <span>+</span>
+                    <IconVite />
+                </div>
             </Card>
             <Link class={style.link} href="/post/" title="点击跳转">
                 浏览文章

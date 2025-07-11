@@ -21,8 +21,8 @@ export function IconFault(
                 class={style.dollar}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
+                stroke-width="4"
+                stroke-linecap="round"
             >
                 <path d="M37 63A13 13 0 1 0 50 50" />
                 <path d="M46 50L46 85" />
@@ -39,7 +39,7 @@ export function IconFault(
                     r="35"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="10"
+                    stroke-width="10"
                 />
                 <polygon points="33,20 50,15 67,20 50,-20" />
                 <polygon
@@ -66,8 +66,8 @@ export function IconFault(
             <g
                 class={style.dollar}
                 stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
+                stroke-width="4"
+                stroke-linecap="round"
                 fill="none"
             >
                 <path d="M63 37A13 13 0 1 0 50 50" />

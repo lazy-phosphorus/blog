@@ -40,7 +40,7 @@
                 transform: rotateZ(0);
             }
             100% {
-                transform: rotate(360deg);
+                transform: rotateZ(360deg);
             }
         }
         &:hover {
@@ -74,6 +74,12 @@
             }
         }
         > form {
+            margin-bottom: calc(var(--font-size) * 3);
+            transition: {
+                property: margin-bottom;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
             > h2 {
                 font-weight: bold;
                 font-size: calc(var(--font-size) + 0.25rem);
@@ -138,59 +144,60 @@
                     }
                 }
             }
-            > .buttons {
-                width: 100%;
-                left: 0;
-                display: flex;
-                justify-content: center;
-                position: absolute;
-                gap: var(--font-size);
-                bottom: var(--font-size);
-                transition: {
-                    property: gap, font-size;
-                    duration: 0.25s;
-                    timing-function: ease-in-out;
+        }
+    }
+    > .buttons {
+        width: 100%;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        bottom: 0.25rem;
+        position: absolute;
+        gap: var(--font-size);
+        bottom: var(--font-size);
+        transition: {
+            property: gap, font-size, bottom;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        > button {
+            display: block;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            padding: calc(var(--font-size) / 4) var(--font-size);
+            transition: {
+                property: padding, background-color, color;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            &[type="submit"] {
+                background-color: var(--color-primary);
+                color: var(--color-primary-content);
+                &:hover {
+                    background-color: rgb(
+                        from var(--color-primary) calc(r - 50) calc(g - 50)
+                            calc(b - 50)
+                    );
                 }
-                > button {
-                    display: block;
-                    border-radius: 0.25rem;
-                    cursor: pointer;
-                    padding: calc(var(--font-size) / 4) var(--font-size);
-                    transition: {
-                        property: padding, background-color, color;
-                        duration: 0.25s;
-                        timing-function: ease-in-out;
-                    }
-                    &[type="submit"] {
-                        background-color: var(--color-primary);
-                        color: var(--color-primary-content);
-                        &:hover {
-                            background-color: rgb(
-                                from var(--color-primary) calc(r - 50)
-                                    calc(g - 50) calc(b - 50)
-                            );
-                        }
-                    }
-                    &[type="reset"] {
-                        background-color: var(--color-secondary);
-                        color: var(--color-secondary-content);
-                        &:hover {
-                            background-color: rgb(
-                                from var(--color-secondary) calc(r - 50)
-                                    calc(g - 50) calc(b - 50)
-                            );
-                        }
-                    }
-                    &[type="button"] {
-                        background-color: var(--color-base-content);
-                        color: var(--color-base-300);
-                        &:hover {
-                            background-color: rgb(
-                                from var(--color-base-content) calc(r - 50)
-                                    calc(g - 50) calc(b - 50)
-                            );
-                        }
-                    }
+            }
+            &[type="reset"] {
+                background-color: var(--color-secondary);
+                color: var(--color-secondary-content);
+                &:hover {
+                    background-color: rgb(
+                        from var(--color-secondary) calc(r - 50) calc(g - 50)
+                            calc(b - 50)
+                    );
+                }
+            }
+            &[type="button"] {
+                background-color: var(--color-base-content);
+                color: var(--color-base-300);
+                &:hover {
+                    background-color: rgb(
+                        from var(--color-base-content) calc(r - 50) calc(g - 50)
+                            calc(b - 50)
+                    );
                 }
             }
         }

@@ -8,15 +8,13 @@ export function IconNoWine(
             xmlns="http://www.w3.org/2000/svg"
             width="1em"
             height="1em"
-            viewBox="0 0 48 48"
+            viewBox="0 0 24 24"
             {...props}
         >
-            {/* Icon from Health Icons by Resolve to Save Lives - https://github.com/resolvetosavelives/healthicons/blob/main/LICENSE */}
+            {/* Icon from Google Material Icons by Material Design Authors - https://github.com/material-icons/material-icons/blob/master/LICENSE */}
             <path
                 fill="currentColor"
-                fillRule="evenodd"
-                d="M42 24c0 4.61-1.734 8.817-4.584 12.001L29 27.586v-.742c0-2.717-1.102-5.324-3.062-7.245a.5.5 0 0 1-.152-.36V10.7c0-.387-.32-.7-.715-.7h-1.785a.707.707 0 0 0-.715.7v8.527a.5.5 0 0 1-.169.372A9.98 9.98 0 0 0 19 27.086v9.368c0 .854.706 1.546 1.577 1.546h6.74c.93 0 1.683-.739 1.683-1.65v-5.936l7.001 7.002A17.93 17.93 0 0 1 24 42c-9.941 0-18-8.059-18-18c0-4.738 1.83-9.048 4.823-12.263l7.47 7.47a1 1 0 0 0 1.414-1.414l-7.442-7.442A17.93 17.93 0 0 1 24 6c9.941 0 18 8.059 18 18m2 0c0 11.046-8.954 20-20 20S4 35.046 4 24S12.954 4 24 4s20 8.954 20 20m-23 2h6v5h-6z"
-                clipRule="evenodd"
+                d="M20.49 20.49L3.51 3.51A.996.996 0 1 0 2.1 4.92l7.54 7.54L11 14v5H7c-.55 0-1 .45-1 1s.45 1 1 1h10c.32 0 .59-.16.78-.4l1.3 1.3a.996.996 0 1 0 1.41-1.41M13 19v-3.17L16.17 19zM7.83 5l-2-2h13.72c.8 0 1.45.65 1.45 1.45c0 .35-.13.7-.37.96l-5.83 6.56L9.83 7h6.74l1.78-2z"
             />
         </svg>
     );

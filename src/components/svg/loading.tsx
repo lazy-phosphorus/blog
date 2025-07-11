@@ -23,7 +23,7 @@ export function IconLoading(
             <g
                 class={style.gear}
                 fill="currentColor"
-                clip-path="url(#svg-loading-boundary)"
+                clipPath="url(#svg-loading-boundary)"
             >
                 <circle
                     cx="50"

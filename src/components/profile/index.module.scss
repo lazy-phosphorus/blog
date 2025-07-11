@@ -6,19 +6,39 @@
     margin: auto;
     width: 40rem;
     max-width: calc(100% - 0.5rem);
+    overflow-y: auto;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    top: var(--header-height);
+    bottom: 0;
+    box-sizing: border-box;
+    padding-bottom: 0.25rem;
+    height: calc(100% - var(--header-height));
     transition: {
-        property: top;
+        property: height;
         duration: 0.25s;
         timing-function: ease-in-out;
     }
+    animation: {
+        name: fade;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+        iteration-count: 1;
+    }
+    @keyframes fade {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 100;
+        }
+    }
     > .card {
         width: 100%;
-        flex: none;
+        overflow: auto;
+        flex-shrink: 1;
+        flex-grow: 0;
         > .avatar {
             left: 0;
             right: 0;
@@ -71,6 +91,7 @@
             }
         }
         > p {
+            text-align: justify;
             margin: {
                 top: calc(var(--font-size) / 2);
                 bottom: calc(var(--font-size) / 2);
@@ -111,6 +132,25 @@
                         duration: 0.25s;
                         timing-function: ease-in-out;
                     }
+                }
+            }
+        }
+        > .powered {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--font-size);
+            transition: {
+                property: gap;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            > svg {
+                font-size: calc(var(--font-size) + 0.5rem);
+                transition: {
+                    property: font-size;
+                    duration: 0.25s;
+                    timing-function: ease-in-out;
                 }
             }
         }

@@ -7,6 +7,10 @@ export class Pawn
     extends Piece
     implements Container<Sprite | BitmapText>, IMovable
 {
+    constructor(bloc: Bloc) {
+        super(bloc, bloc === Bloc.RED ? "兵" : "卒");
+    }
+
     public override movable(_to: Point, blockSize: number): boolean {
         const from = screenPoint2BoardPoint(this.position, blockSize);
         const to = screenPoint2BoardPoint(_to, blockSize);

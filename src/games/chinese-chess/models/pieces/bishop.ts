@@ -9,6 +9,10 @@ export class Bishop
     extends Piece
     implements Container<Sprite | BitmapText>, IMovable
 {
+    constructor(bloc: Bloc) {
+        super(bloc, bloc === Bloc.RED ? "相" : "象");
+    }
+
     public override movable(
         _to: Point,
         blockSize: number,
@@ -25,8 +29,8 @@ export class Bishop
         const weakPoint = new Point((from.x + to.x) / 2, (from.y + to.y) / 2);
         if (situation.getBlocOfPieceAt(weakPoint) !== Bloc.SPACE) return false;
 
-        // TODO 不允许过河
-
-        return true;
+        // 不允许过河
+        if (this.bloc === Bloc.RED) return from.x >= 6;
+        else return from.y <= 5;
     }
 }

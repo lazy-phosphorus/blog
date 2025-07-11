@@ -1,6 +1,6 @@
 import { Application } from "pixi.js";
 
-export function create(container: HTMLCanvasElement) {
+export function create(container: HTMLElement) {
     const app = new Application();
 
     app.init({

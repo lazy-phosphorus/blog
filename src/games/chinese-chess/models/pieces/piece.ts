@@ -37,8 +37,6 @@ export interface IMovable {
     ): boolean;
 }
 
-const texture = await Assets.load<Texture<ImageSource>>(file);
-
 export abstract class Piece
     extends Container<Sprite | BitmapText>
     implements Container<Sprite | BitmapText>, IMovable
@@ -47,16 +45,11 @@ export abstract class Piece
         position: new Point(0, 0),
         eventMode: "static",
         cursor: "pointer",
-        texture,
     });
     private readonly text: BitmapText = new BitmapText({
         anchor: 0.5,
         style: new TextStyle({
-            fontFamily: [
-                "Fira Code Variable",
-                "Noto Sans SC Variable",
-                "LXGW WenKai",
-            ],
+            fontFamily: ["Fira Code Variable", "Noto Sans SC Variable"],
             align: "center",
         }),
     });
@@ -67,6 +60,10 @@ export abstract class Piece
         options?: ContainerOptions<Sprite | BitmapText>,
     ) {
         super(options);
+
+        Assets.load<Texture<ImageSource>>(file).then(
+            (v) => (this.sprite.texture = v),
+        );
 
         this.text.text = this.__type;
         this.resize();
@@ -107,6 +104,7 @@ export abstract class Piece
     ) {
         // 对方回合
         if (this.bloc !== currentTurn) return false;
+
         // 友军
         if (
             situation.getBlocOfPieceAt(
@@ -114,6 +112,7 @@ export abstract class Piece
             ) === this.bloc
         )
             return false;
+
         // 违反行棋规则
         if (!this.movable(to, blockSize, situation)) return false;
 

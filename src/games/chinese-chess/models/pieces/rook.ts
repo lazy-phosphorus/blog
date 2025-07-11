@@ -8,6 +8,10 @@ export class Rook
     extends Piece
     implements Container<Sprite | BitmapText>, IMovable
 {
+    constructor(bloc: Bloc) {
+        super(bloc, "車");
+    }
+
     public override movable(
         _to: Point,
         blockSize: number,

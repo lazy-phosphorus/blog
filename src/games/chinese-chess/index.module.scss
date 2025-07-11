@@ -1,0 +1,26 @@
+@use "@/assets/scss/variables.scss" as v;
+
+.chess {
+    position: fixed;
+    width: 100%;
+    left: 0;
+    bottom: 0.25rem;
+    height: auto;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    top: var(--header-height);
+    transition: {
+        property: top;
+        duration: 0.25s;
+        timing-function: ease-in-out;
+    }
+    @media screen and (max-width: v.$screen-4xl) {
+        top: calc(var(--header-height) + 0.25rem);
+    }
+    > div {
+        border-radius: 0.25rem;
+        overflow: hidden;
+    }
+}

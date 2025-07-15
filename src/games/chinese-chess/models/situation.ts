@@ -1,34 +1,184 @@
-import type { Container, Point } from "pixi.js";
-import { Bloc, type Piece } from "./pieces/piece";
+import { Point } from "pixi.js";
+import type { Container } from "pixi.js";
+import { Bishop } from "./pieces/bishop";
+import { Cannon } from "./pieces/cannon";
+import { General } from "./pieces/general";
+import { Guard } from "./pieces/guard";
+import { Knight } from "./pieces/knight";
+import { Pawn } from "./pieces/pawn";
+import { Bloc } from "./pieces/piece";
+import type { Piece } from "./pieces/piece";
 import { Rook } from "./pieces/rook";
+import { Space } from "./pieces/space";
 
 export class Situation {
-    private readonly battleField: Piece[][] = [];
-    constructor() {
-        this.initialize();
-    }
+    private readonly __battleField: Piece[][] = [];
+    constructor(
+        private __blockSize: number,
+        private readonly __stage: Container,
+        private readonly __clickHandler: (event: Piece) => void,
+    ) {
+        this.__initialize();
 
-    public getBlocOfPieceAt(point: Point) {
-        return this.battleField[point.x]![point.y]!.bloc;
-    }
-
-    public addToStage(stage: Container) {
-        for (const line of this.battleField) {
-            for (const piece of line) {
-                stage.addChild(piece);
+        for (let i = 0; i < this.__battleField.length; i++) {
+            for (let j = 0; j < this.__battleField[i]!.length; j++) {
+                this.__battleField[i]![j]!.addToStage(__stage);
             }
         }
     }
 
-    public resize(blockSize: number) {
-        for (const line of this.battleField) {
+    public set blockSize(blockSize: number) {
+        for (const line of this.__battleField) {
             for (const piece of line) {
-                piece.setSize(blockSize, blockSize);
+                piece.blockSize = blockSize;
             }
+        }
+        this.__blockSize = blockSize;
+    }
+
+    public getBlocOfPieceAt({ x, y }: Point) {
+        return this.__battleField[y - 1]![x - 1]!.bloc;
+    }
+
+    public syncBattleField(from: Point, to: Point): Piece | null {
+        const temp = this.__battleField[to.y - 1]![to.x - 1]!;
+        this.__battleField[to.y - 1]![to.x - 1] =
+            this.__battleField[from.y - 1]![from.x - 1]!;
+
+        if (temp.bloc !== Bloc.SPACE) {
+            const space = new Space(this.__blockSize);
+            space.position = from;
+            space.onClick(this.__clickHandler);
+            space.addToStage(this.__stage);
+            this.__battleField[from.y - 1]![from.x - 1] = space;
+            temp.removeFromStage();
+            return temp;
+        } else {
+            this.__battleField[from.y - 1]![from.x - 1] = temp;
+            temp.position = from;
+            return null;
         }
     }
 
-    private initialize() {
-        this.battleField.push([new Rook(Bloc.BLACK)]);
+    private __initialize() {
+        this.__battleField.push(
+            [
+                new Rook(Bloc.BLACK, this.__blockSize),
+                new Knight(Bloc.BLACK, this.__blockSize),
+                new Bishop(Bloc.BLACK, this.__blockSize),
+                new Guard(Bloc.BLACK, this.__blockSize),
+                new General(Bloc.BLACK, this.__blockSize),
+                new Guard(Bloc.BLACK, this.__blockSize),
+                new Bishop(Bloc.BLACK, this.__blockSize),
+                new Knight(Bloc.BLACK, this.__blockSize),
+                new Rook(Bloc.BLACK, this.__blockSize),
+            ],
+            [
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+            ],
+            [
+                new Space(this.__blockSize),
+                new Cannon(Bloc.BLACK, this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Cannon(Bloc.BLACK, this.__blockSize),
+                new Space(this.__blockSize),
+            ],
+            [
+                new Pawn(Bloc.BLACK, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.BLACK, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.BLACK, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.BLACK, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.BLACK, this.__blockSize),
+            ],
+            [
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+            ],
+            [
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+            ],
+            [
+                new Pawn(Bloc.RED, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.RED, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.RED, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.RED, this.__blockSize),
+                new Space(this.__blockSize),
+                new Pawn(Bloc.RED, this.__blockSize),
+            ],
+            [
+                new Space(this.__blockSize),
+                new Cannon(Bloc.RED, this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Cannon(Bloc.RED, this.__blockSize),
+                new Space(this.__blockSize),
+            ],
+            [
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+                new Space(this.__blockSize),
+            ],
+            [
+                new Rook(Bloc.RED, this.__blockSize),
+                new Knight(Bloc.RED, this.__blockSize),
+                new Bishop(Bloc.RED, this.__blockSize),
+                new Guard(Bloc.RED, this.__blockSize),
+                new General(Bloc.RED, this.__blockSize),
+                new Guard(Bloc.RED, this.__blockSize),
+                new Bishop(Bloc.RED, this.__blockSize),
+                new Knight(Bloc.RED, this.__blockSize),
+                new Rook(Bloc.RED, this.__blockSize),
+            ],
+        );
+
+        for (let i = 0; i < this.__battleField.length; i++) {
+            for (let j = 0; j < this.__battleField[i]!.length; j++) {
+                this.__battleField[i]![j]!.position = new Point(j + 1, i + 1);
+                this.__battleField[i]![j]!.onClick(this.__clickHandler);
+            }
+        }
     }
 }

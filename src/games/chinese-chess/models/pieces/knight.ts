@@ -1,24 +1,15 @@
-import { type BitmapText, type Container, Point, type Sprite } from "pixi.js";
-import { screenPoint2BoardPoint } from "../../utils/point-convert";
+import { Point } from "pixi.js";
 import type { Situation } from "../situation";
-import { Piece } from "./piece";
-import { Bloc, type IMovable } from "./piece";
+import { Bloc, Piece } from "./piece";
+import type { IMovable } from "./piece";
 
-export class Knight
-    extends Piece
-    implements Container<Sprite | BitmapText>, IMovable
-{
-    constructor(bloc: Bloc) {
-        super(bloc, "馬");
+export class Knight extends Piece implements IMovable {
+    constructor(bloc: Bloc, blockSize: number) {
+        super(bloc, "馬", blockSize);
     }
 
-    public override movable(
-        _to: Point,
-        blockSize: number,
-        situation: Situation,
-    ): boolean {
-        const from = screenPoint2BoardPoint(this.position, blockSize);
-        const to = screenPoint2BoardPoint(_to, blockSize);
+    public override movable(to: Point, situation: Situation) {
+        const from = this.position;
 
         // 不允许直线行棋
         if (from.x === to.x || from.y === to.y) return false;
@@ -32,13 +23,13 @@ export class Knight
             return (
                 situation.getBlocOfPieceAt(
                     new Point((from.x + to.x) / 2, from.y),
-                ) !== Bloc.SPACE
+                ) === Bloc.SPACE
             );
         if (Math.abs(to.y - from.y) === 2)
             return (
                 situation.getBlocOfPieceAt(
                     new Point(from.x, (from.y + to.y) / 2),
-                ) !== Bloc.SPACE
+                ) === Bloc.SPACE
             );
 
         return true;

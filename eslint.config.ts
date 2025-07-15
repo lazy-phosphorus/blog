@@ -6,16 +6,25 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
     {
-        ignores: ["dist/*", "**/*.ts.build-*.mjs", "*.js", "*.cjs", "*.mjs"],
-    },
-    {
+        ignores: ["dist/*"],
         files: ["**/*.ts", "**/*.tsx"],
-        extends: [eslint.configs.recommended, tseslint.configs.recommended],
+        extends: [
+            eslint.configs.recommended,
+            tseslint.configs.recommended,
+            prettier,
+        ],
         languageOptions: {
             parser: tseslint.parser,
             parserOptions: {
                 projectService: true,
                 tsconfigRootDir: import.meta.dirname,
+                warnOnUnsupportedTypeScriptVersion: false,
+                sourceType: "module",
+                ecmaVersion: "latest",
+            },
+            globals: {
+                ...globals.serviceworker,
+                ...globals.browser,
             },
         },
         rules: {
@@ -27,36 +36,11 @@ export default tseslint.config(
         },
     },
     {
-        languageOptions: {
-            parserOptions: {
-                warnOnUnsupportedTypeScriptVersion: false,
-                sourceType: "module",
-                ecmaVersion: "latest",
-            },
-        },
-    },
-    {},
-    {
-        files: ["**/*.{ts,tsx,js,jsx}"],
-        languageOptions: {
-            parser: tseslint.parser,
-            globals: {
-                ...globals.serviceworker,
-                ...globals.browser,
-            },
-        },
-    },
-    prettier,
-    {
         files: ["**/*.{mdx}"],
         ...mdx.flat,
         processor: mdx.createRemarkProcessor({
             lintCodeBlocks: true,
         }),
-    },
-    {
-        files: ["**/*.{mdx}"],
-        ...mdx.flatCodeBlocks,
         rules: {
             ...mdx.flatCodeBlocks.rules,
             "no-var": "error",

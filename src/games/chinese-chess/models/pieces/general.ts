@@ -1,19 +1,14 @@
-import type { BitmapText, Container, Point, Sprite } from "pixi.js";
-import { screenPoint2BoardPoint } from "../../utils/point-convert";
-import { Piece } from "./piece";
-import { Bloc, type IMovable } from "./piece";
+import type { Point } from "pixi.js";
+import { Bloc, Piece } from "./piece";
+import type { IMovable } from "./piece";
 
-export class General
-    extends Piece
-    implements Container<Sprite | BitmapText>, IMovable
-{
-    constructor(bloc: Bloc) {
-        super(bloc, bloc === Bloc.RED ? "帥" : "將");
+export class General extends Piece implements IMovable {
+    constructor(bloc: Bloc, blockSize: number) {
+        super(bloc, bloc === Bloc.RED ? "帥" : "將", blockSize);
     }
 
-    public override movable(_to: Point, blockSize: number): boolean {
-        const from = screenPoint2BoardPoint(this.position, blockSize);
-        const to = screenPoint2BoardPoint(_to, blockSize);
+    public override movable(to: Point) {
+        const from = this.position;
 
         // 仅能横或竖 1 格
         if (Math.abs(to.x - from.x) + Math.abs(to.y - from.y) !== 1)

@@ -9,7 +9,7 @@ export function create(container: HTMLElement) {
         autoDensity: true,
         preference: "webgpu",
         powerPreference: "high-performance",
-        backgroundColor: 0x1099bb,
+        backgroundColor: 0x00bcd4,
         resolution: devicePixelRatio,
     }).then(() => container.appendChild(app.canvas));
 

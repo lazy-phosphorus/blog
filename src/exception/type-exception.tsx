@@ -2,17 +2,17 @@ import type { ComponentChildren } from "preact";
 import { BaseException } from "./base-exception";
 
 export class TypeException extends BaseException {
-    private static generateTitle(where: string) {
+    private static __generateTitle(where: string) {
         return <>{where} 类型错误</>;
     }
 
-    protected override title: ComponentChildren;
+    protected override __title: ComponentChildren;
 
     constructor(
         where: string,
-        protected override message: ComponentChildren,
+        protected override __message: ComponentChildren,
     ) {
         super();
-        this.title = TypeException.generateTitle(where);
+        this.__title = TypeException.__generateTitle(where);
     }
 }

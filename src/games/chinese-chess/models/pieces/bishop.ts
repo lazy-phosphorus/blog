@@ -1,25 +1,15 @@
 import { Point } from "pixi.js";
-import type { BitmapText, Container, Sprite } from "pixi.js";
-import { screenPoint2BoardPoint } from "../../utils/point-convert";
 import type { Situation } from "../situation";
 import { Bloc, Piece } from "./piece";
 import type { IMovable } from "./piece";
 
-export class Bishop
-    extends Piece
-    implements Container<Sprite | BitmapText>, IMovable
-{
-    constructor(bloc: Bloc) {
-        super(bloc, bloc === Bloc.RED ? "相" : "象");
+export class Bishop extends Piece implements IMovable {
+    constructor(bloc: Bloc, blockSize: number) {
+        super(bloc, bloc === Bloc.RED ? "相" : "象", blockSize);
     }
 
-    public override movable(
-        _to: Point,
-        blockSize: number,
-        situation: Situation,
-    ) {
-        const from = screenPoint2BoardPoint(this.position, blockSize);
-        const to = screenPoint2BoardPoint(_to, blockSize);
+    public override movable(to: Point, situation: Situation) {
+        const from = this.position;
 
         // 田字行棋
         if (Math.abs(to.x - from.x) !== 2 || Math.abs(to.y - from.y) !== 2)
@@ -30,7 +20,7 @@ export class Bishop
         if (situation.getBlocOfPieceAt(weakPoint) !== Bloc.SPACE) return false;
 
         // 不允许过河
-        if (this.bloc === Bloc.RED) return from.x >= 6;
-        else return from.y <= 5;
+        if (this.bloc === Bloc.RED) return to.y >= 6;
+        else return to.y <= 5;
     }
 }

@@ -1,7 +1,14 @@
-import { Assets, Point, Sprite, Texture } from "pixi.js";
+import {
+    Assets,
+    ColorMatrixFilter,
+    Point,
+    Sprite,
+    Texture,
+    Ticker,
+} from "pixi.js";
 import type { Container, ImageSource } from "pixi.js";
-import background from "../assets/background.jpg";
-import line from "../assets/chess-board.svg";
+import line from "../assets/board-line.svg";
+import background from "../assets/desk.webp";
 import { Bloc } from "./pieces/piece";
 import type { Piece } from "./pieces/piece";
 import { SelectBox } from "./select-box";
@@ -14,6 +21,7 @@ export class Board {
     private readonly __fromBox: SelectBox;
     private readonly __toBox: SelectBox;
     private readonly __selectedBox: SelectBox;
+    private readonly __ticker = new Ticker();
     private readonly __self = new Sprite({
         position: new Point(0, 0),
         texture: Texture.EMPTY,
@@ -36,13 +44,18 @@ export class Board {
             (v) => (this.__self.texture = v),
         );
         Assets.load<Texture<ImageSource>>(background).then((v) => {
-            v.source.scaleMode = "nearest";
-            v.source.wrapMode = "repeat";
             this.__background.texture = v;
         });
 
+        const filter = new ColorMatrixFilter();
+        filter.brightness(1.25, true);
+        filter.saturate(0.25, true);
+        this.__background.filters = filter;
+
         stage.addChild(this.__background);
         stage.addChild(this.__self);
+        this.__ticker.minFPS = 30;
+        this.__ticker.maxFPS = 60;
         this.__fromBox = new SelectBox(new Point(1, 1), __blockSize, stage);
         this.__toBox = new SelectBox(new Point(1, 1), __blockSize, stage);
         this.__selectedBox = new SelectBox(new Point(1, 1), __blockSize, stage);
@@ -80,7 +93,38 @@ export class Board {
         return this.__turn;
     }
 
+    public regret() {
+        const step = this.__history.pop();
+        if (step === void 0) return;
+
+        this.__situation.traceBack(step.from, step.to, step.removed);
+        this.__selectedPiece = null;
+        this.__turn = this.__turn === Bloc.RED ? Bloc.BLACK : Bloc.RED;
+
+        const current = this.__history[this.__history.length - 1];
+        if (current === void 0) {
+            this.__fromBox.visible = false;
+            this.__toBox.visible = false;
+        } else {
+            this.__fromBox.position = current.from;
+            this.__toBox.position = current.to;
+        }
+
+        return;
+    }
+
+    public reset() {
+        this.__situation.reset();
+        this.__fromBox.visible = false;
+        this.__toBox.visible = false;
+        this.__selectedBox.visible = false;
+        this.__selectedPiece = null;
+        this.__history.splice(0);
+        this.__turn = Bloc.RED;
+    }
+
     private __clickHandler(target: Piece) {
+        console.log(target);
         if (target.bloc === this.__turn) {
             this.selected = target;
             return;
@@ -104,8 +148,10 @@ export class Board {
 
             this.__selectedBox.visible = false;
             this.__selectedPiece = null;
+
             this.__fromBox.position = step.from;
             this.__fromBox.visible = true;
+
             this.__toBox.visible = true;
             this.__toBox.position = step.to;
         }

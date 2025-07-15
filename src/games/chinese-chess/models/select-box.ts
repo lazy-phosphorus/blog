@@ -1,7 +1,10 @@
 import { Assets, Sprite, Texture } from "pixi.js";
 import type { Container, ImageSource, Point } from "pixi.js";
-import file from "../assets/chess-select-box.svg";
-import { boardPoint2ScreenPoint } from "../utils/point-convert";
+import file from "../assets/select-box.svg";
+import {
+    boardPoint2ScreenPoint,
+    screenPoint2BoardPoint,
+} from "../utils/point-convert";
 
 export class SelectBox {
     private readonly __self = new Sprite({
@@ -20,15 +23,18 @@ export class SelectBox {
         );
 
         this.__self.position = boardPoint2ScreenPoint(position, __blockSize);
-        this.__self.width = __blockSize;
-        this.__self.height = __blockSize;
+        this.resize();
         stage.addChild(this.__self);
     }
 
     public set blockSize(value: number) {
-        this.__self.width = value;
-        this.__self.height = value;
+        const boardPoint = screenPoint2BoardPoint(
+            this.__self.position,
+            this.__blockSize,
+        );
+        this.__self.position = boardPoint2ScreenPoint(boardPoint, value);
         this.__blockSize = value;
+        this.resize();
     }
 
     public set position(point: Point) {
@@ -37,5 +43,10 @@ export class SelectBox {
 
     public set visible(value: boolean) {
         this.__self.visible = value;
+    }
+
+    private resize() {
+        this.__self.width = this.__blockSize;
+        this.__self.height = this.__blockSize;
     }
 }

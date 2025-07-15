@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "preact/hooks";
+import { PlaceHolder } from "@/components/placeholder";
 import { create } from "../app";
 import style from "./index.module.scss";
 import { Board } from "./models/board";
@@ -32,15 +33,34 @@ export function ChineseChess() {
         handleResize();
         addEventListener("resize", handleResize);
 
+        containerRef.current!.classList.add(style.ready!);
+
         return () => {
             game.destroy();
             removeEventListener("resize", handleResize);
         };
-    }, [containerRef, boardRef]);
+    }, [containerRef, boardRef, handleResize]);
+
+    const handleRegret = useCallback(() => {
+        boardRef.current!.regret();
+    }, [boardRef]);
+
+    const handleReset = useCallback(() => {
+        boardRef.current!.reset();
+    }, [boardRef]);
 
     return (
         <div class={style.chess}>
-            <div ref={containerRef} />
+            <PlaceHolder class={style.placeholder} />
+            <div class={style.game} ref={containerRef} />
+            <div class={style.buttons}>
+                <button type="button" title="悔棋" onClick={handleRegret}>
+                    悔棋
+                </button>
+                <button type="button" title="重置" onClick={handleReset}>
+                    重置
+                </button>
+            </div>
         </div>
     );
 }

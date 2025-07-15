@@ -2,12 +2,14 @@
 
 .chess {
     position: fixed;
-    width: 100%;
-    left: 0;
+    width: calc(100% - 0.5rem);
+    left: 0.25rem;
     bottom: 0.25rem;
     height: auto;
     box-sizing: border-box;
     display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     top: var(--header-height);
@@ -19,8 +21,59 @@
     @media screen and (max-width: v.$screen-4xl) {
         top: calc(var(--header-height) + 0.25rem);
     }
-    > div {
+    > .game {
         border-radius: 0.25rem;
         overflow: hidden;
+        flex: none;
+        display: none;
+        &.ready {
+            display: block;
+        }
+    }
+    > .placeholder {
+        flex: auto;
+        &:has(+ .ready) {
+            display: none;
+        }
+    }
+    > .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        width: auto;
+        gap: var(--font-size);
+        transition: {
+            property: gap;
+            duration: 0.25s;
+            timing-function: ease-in-out;
+        }
+        @media screen and (max-width: v.$screen-4xl) {
+            flex-direction: row;
+            width: 100%;
+            height: auto;
+        }
+        > button {
+            cursor: pointer;
+            flex: none;
+            border-radius: 100vmax;
+            display: block;
+            background-color: var(--color-primary);
+            color: var(--color-primary-content);
+            padding: calc(var(--font-size) / 2) calc(var(--font-size) * 2);
+            margin-top: var(--font-size);
+            transition: {
+                property: background-color, color, padding, margin-top;
+                duration: 0.25s;
+                timing-function: ease-in-out;
+            }
+            &:hover {
+                background-color: rgb(
+                    from var(--color-primary) calc(r - 50) calc(g - 50)
+                        calc(b - 50)
+                );
+            }
+        }
     }
 }

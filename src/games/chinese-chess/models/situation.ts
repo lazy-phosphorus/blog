@@ -19,12 +19,6 @@ export class Situation {
         private readonly __clickHandler: (event: Piece) => void,
     ) {
         this.__initialize();
-
-        for (let i = 0; i < this.__battleField.length; i++) {
-            for (let j = 0; j < this.__battleField[i]!.length; j++) {
-                this.__battleField[i]![j]!.addToStage(__stage);
-            }
-        }
     }
 
     public set blockSize(blockSize: number) {
@@ -58,6 +52,36 @@ export class Situation {
             temp.position = from;
             return null;
         }
+    }
+
+    public traceBack(from: Point, to: Point, removed: Piece | null) {
+        const temp = this.__battleField[from.y - 1]![from.x - 1]!;
+        this.__battleField[from.y - 1]![from.x - 1] =
+            this.__battleField[to.y - 1]![to.x - 1]!;
+
+        this.__battleField[from.y - 1]![from.x - 1]!.position = from;
+
+        if (removed !== null) {
+            temp.removeFromStage();
+            removed.position = to;
+            this.__battleField[to.y - 1]![to.x - 1] = removed;
+            removed.addToStage(this.__stage);
+        } else {
+            temp.position = to;
+            this.__battleField[to.y - 1]![to.x - 1] = temp;
+        }
+    }
+
+    public reset() {
+        while (this.__battleField.length > 0) {
+            const line = this.__battleField.pop()!;
+            while (line.length > 0) {
+                const temp = line.pop()!;
+                temp.removeFromStage();
+            }
+        }
+
+        this.__initialize();
     }
 
     private __initialize() {
@@ -178,6 +202,12 @@ export class Situation {
             for (let j = 0; j < this.__battleField[i]!.length; j++) {
                 this.__battleField[i]![j]!.position = new Point(j + 1, i + 1);
                 this.__battleField[i]![j]!.onClick(this.__clickHandler);
+            }
+        }
+
+        for (let i = 0; i < this.__battleField.length; i++) {
+            for (let j = 0; j < this.__battleField[i]!.length; j++) {
+                this.__battleField[i]![j]!.addToStage(this.__stage);
             }
         }
     }

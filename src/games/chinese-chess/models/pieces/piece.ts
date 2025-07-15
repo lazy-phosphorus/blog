@@ -1,7 +1,7 @@
 import {
     Assets,
     BitmapText,
-    Circle,
+    ColorMatrixFilter,
     Container,
     Point,
     Sprite,
@@ -9,7 +9,8 @@ import {
     Texture,
 } from "pixi.js";
 import type { ImageSource } from "pixi.js";
-import file from "../../assets/chess-piece.svg";
+import border from "../../assets/piece-border.svg";
+import background from "../../assets/piece.webp";
 import {
     boardPoint2ScreenPoint,
     screenPoint2BoardPoint,
@@ -27,8 +28,14 @@ export interface IMovable {
 }
 
 export abstract class Piece implements IMovable {
+    private readonly __background = new Sprite({
+        eventMode: "none",
+        texture: Texture.EMPTY,
+        position: new Point(0, 0),
+    });
     private readonly __circle: Sprite = new Sprite({
         position: new Point(0, 0),
+        roundPixels: true,
         eventMode: "static",
         texture: Texture.EMPTY,
     });
@@ -41,7 +48,8 @@ export abstract class Piece implements IMovable {
     });
 
     protected readonly __self = new Container({
-        children: [this.__circle, this.__text],
+        eventMode: "passive",
+        children: [this.__background, this.__circle, this.__text],
     });
 
     constructor(
@@ -49,9 +57,17 @@ export abstract class Piece implements IMovable {
         private readonly __type: string,
         private __blockSize: number,
     ) {
-        Assets.load<Texture<ImageSource>>(file).then(
+        Assets.load<Texture<ImageSource>>(border).then(
             (v) => (this.__circle.texture = v),
         );
+        Assets.load<Texture<ImageSource>>(background).then(
+            (v) => (this.__background.texture = v),
+        );
+
+        const filter = new ColorMatrixFilter();
+        filter.brightness(1.1, true);
+        filter.saturate(0.25, true);
+        this.__background.filters = filter;
 
         if (__bloc === Bloc.SPACE) this.__self.alpha = 0;
 
@@ -113,13 +129,10 @@ export abstract class Piece implements IMovable {
     }
 
     private resize() {
+        this.__background.height = this.__blockSize;
+        this.__background.width = this.__blockSize;
         this.__circle.height = this.__blockSize;
         this.__circle.width = this.__blockSize;
-        this.__circle.hitArea = new Circle(
-            this.__blockSize / 2,
-            this.__blockSize / 2,
-            this.__blockSize / 2,
-        );
 
         this.__text.position = new Point(
             this.__blockSize / 2,

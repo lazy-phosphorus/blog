@@ -31,7 +31,7 @@ export function IconFault(
             <g
                 class={style.fault}
                 fill="currentColor"
-                clipPath="url(#svg-error-boundary)"
+                clip-path="url(#svg-error-boundary)"
             >
                 <circle
                     cx="50"

@@ -3,17 +3,17 @@ import { Code } from "@/components/code";
 import { BaseException } from "./base-exception";
 
 export class CanvasException extends BaseException {
-    protected override title: ComponentChildren;
+    protected override __title: ComponentChildren;
 
     constructor(
         where: string,
-        protected override message: ComponentChildren,
+        protected override __message: ComponentChildren,
     ) {
         super();
-        this.title = CanvasException.generateTitle(where);
+        this.__title = CanvasException.__generateTitle(where);
     }
 
-    private static generateTitle(where: string) {
+    private static __generateTitle(where: string) {
         return (
             <>
                 <Code type="default">&lt;canvas&gt;</Code>不支持 {where}

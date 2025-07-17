@@ -28,6 +28,10 @@ export interface IMovable {
 }
 
 export abstract class Piece implements IMovable {
+    protected readonly __self = new Container({
+        eventMode: "passive",
+    });
+
     private readonly __background = new Sprite({
         eventMode: "none",
         texture: Texture.EMPTY,
@@ -47,11 +51,6 @@ export abstract class Piece implements IMovable {
         }),
     });
 
-    protected readonly __self = new Container({
-        eventMode: "passive",
-        children: [this.__background, this.__circle, this.__text],
-    });
-
     constructor(
         private readonly __bloc: Bloc,
         private readonly __type: string,
@@ -66,7 +65,6 @@ export abstract class Piece implements IMovable {
 
         const filter = new ColorMatrixFilter();
         filter.brightness(1.1, true);
-        filter.saturate(0.25, true);
         this.__background.filters = filter;
 
         if (__bloc === Bloc.SPACE) this.__self.alpha = 0;
@@ -74,14 +72,13 @@ export abstract class Piece implements IMovable {
         this.__text.text = this.__type;
         this.__text.style.fill = __bloc === Bloc.RED ? "#F44336" : "#212121";
         this.resize();
+        this.__self.addChild(this.__background);
+        this.__self.addChild(this.__circle);
+        this.__self.addChild(this.__text);
     }
 
     public get bloc() {
         return this.__bloc;
-    }
-
-    public set position(point: Point) {
-        this.__self.position = boardPoint2ScreenPoint(point, this.__blockSize);
     }
 
     public get position() {
@@ -89,6 +86,10 @@ export abstract class Piece implements IMovable {
             this.__self.position.clone(),
             this.__blockSize,
         );
+    }
+
+    public set position(point: Point) {
+        this.__self.position = boardPoint2ScreenPoint(point, this.__blockSize);
     }
 
     public set blockSize(value: number) {
@@ -139,6 +140,10 @@ export abstract class Piece implements IMovable {
             this.__blockSize / 2,
         );
         this.__text.style.fontSize = this.__blockSize / 1.85;
+        this.__text.style.stroke = {
+            color: "#d4d4d4",
+            width: this.__blockSize / 15,
+        };
 
         this.__self.height = this.__blockSize;
         this.__self.width = this.__blockSize;

@@ -48,8 +48,7 @@ export class Board {
         });
 
         const filter = new ColorMatrixFilter();
-        filter.brightness(1.25, true);
-        filter.saturate(0.25, true);
+        filter.brightness(1.2, true);
         this.__background.filters = filter;
 
         stage.addChild(this.__background);
@@ -66,16 +65,20 @@ export class Board {
         );
     }
 
+    public get turn() {
+        return this.__turn;
+    }
+
     public set blockSize(blockSize: number) {
         this.__situation.blockSize = blockSize;
         this.__selectedBox.blockSize = blockSize;
         this.__fromBox.blockSize = blockSize;
         this.__toBox.blockSize = blockSize;
 
-        this.__background.width = blockSize * 9;
+        this.__background.width = blockSize * 10;
         this.__background.height = blockSize * 10;
 
-        this.__self.width = blockSize * 9;
+        this.__self.width = blockSize * 10;
         this.__self.height = blockSize * 10;
 
         this.__blockSize = blockSize;
@@ -87,10 +90,6 @@ export class Board {
         this.__selectedPiece = target;
         this.__selectedBox.position = target.position;
         this.__selectedBox.visible = true;
-    }
-
-    public get turn() {
-        return this.__turn;
     }
 
     public regret() {

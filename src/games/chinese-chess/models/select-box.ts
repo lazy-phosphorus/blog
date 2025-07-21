@@ -45,6 +45,10 @@ export class SelectBox {
         this.__self.visible = value;
     }
 
+    public set reverse(value: boolean) {
+        this.__self.scale.y = value ? 1 : -1;
+    }
+
     private resize() {
         this.__self.width = this.__blockSize;
         this.__self.height = this.__blockSize;

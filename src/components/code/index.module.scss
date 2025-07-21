@@ -10,7 +10,7 @@
     }
     transition: {
         property: margin-left, margin-right, padding-left, padding-right;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     &.default {

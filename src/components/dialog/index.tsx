@@ -4,7 +4,7 @@ import { useCallback, useImperativeHandle, useRef } from "preact/hooks";
 import style from "./index.module.scss";
 
 type AdditionalPropsType = {
-    closeText: ComponentChildren;
+    closeText: JSX.Signalish<ComponentChildren>;
     dialogRef: Ref<{ showModal: () => void } | null>;
 };
 
@@ -14,6 +14,7 @@ export function Dialog({
     dialogRef,
     ...props
 }: JSX.IntrinsicElements["dialog"] & AdditionalPropsType) {
+    // TODO 退出动画
     const dialog = useRef<HTMLDialogElement | null>(null);
 
     useImperativeHandle(dialogRef, () => {

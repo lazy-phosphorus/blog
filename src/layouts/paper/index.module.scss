@@ -34,15 +34,14 @@
     background-color: rgba(from var(--color-base-100) r g b / 0.8);
     transition: {
         property: background-color, padding;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     animation: {
         name: slide;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
         iteration-count: 1;
-        fill-mode: forwards;
     }
     @keyframes slide {
         0% {
@@ -62,7 +61,7 @@
         background-color: rgba(from var(--color-base-100) r g b / 0.9);
         transition: {
             property: box-shadow, background-color, padding;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }

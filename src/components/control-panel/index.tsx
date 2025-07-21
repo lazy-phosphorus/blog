@@ -1,8 +1,9 @@
 import type { JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { dispatchSuccessEvent } from "@/events/success";
+import { useGloablSignal } from "@/hooks/useGlobalSignal";
 import { Card } from "@/layouts/card";
-import { isControlPanelVisible } from "@/signals/is-control-panel-visible";
+import { Drawer } from "@/layouts/drawer";
 import { IconClose } from "@svg/close";
 import { readConfig, saveConfig } from "./config";
 import type { ConfigType } from "./config";
@@ -30,7 +31,9 @@ const colorItems: { key: keyof ConfigType; label: string }[] = [
 ];
 
 export function ControlPanel() {
+    const { isControlPanelVisible } = useGloablSignal();
     const config = useRef<Partial<ConfigType>>({});
+    const transitionBlocker = useRef<NodeJS.Timeout | undefined>(void 0);
     const formRef = useRef<HTMLFormElement | null>(null);
 
     const syncConfig = useCallback(() => {
@@ -50,7 +53,7 @@ export function ControlPanel() {
 
     const handleClosePanel = useCallback(() => {
         isControlPanelVisible.value = false;
-    }, []);
+    }, [isControlPanelVisible]);
 
     useEffect(() => {
         config.current = readConfig();
@@ -75,11 +78,21 @@ export function ControlPanel() {
         (event) => {
             const element = event.target as HTMLInputElement;
             config.current[element.name as keyof ConfigType] = element.value;
+
+            clearTimeout(transitionBlocker.current);
+            document.body.style.setProperty("--duration-fast", "0s");
+            document.body.style.setProperty("--duration-normal", "0s");
+
             document.body.style.setProperty(element.name, element.value);
             const button = element.previousElementSibling as HTMLButtonElement;
             button.style.setProperty("--color", element.value);
+
+            setTimeout(() => {
+                document.body.style.removeProperty("--duration-fast");
+                document.body.style.removeProperty("--duration-normal");
+            }, 250);
         },
-        [config],
+        [config, transitionBlocker],
     );
 
     const handleSaveConfig = useCallback<
@@ -109,8 +122,10 @@ export function ControlPanel() {
     }, [config, syncConfig]);
 
     return (
-        <aside
-            class={`${style.control}${isControlPanelVisible.value ? "" : ` ${style.hidden}`}`}
+        <Drawer
+            isOpen={isControlPanelVisible}
+            class={style.control}
+            position="left"
         >
             <button
                 type="button"
@@ -173,6 +188,6 @@ export function ControlPanel() {
                     读取默认
                 </button>
             </div>
-        </aside>
+        </Drawer>
     );
 }

@@ -8,7 +8,7 @@
     background-color: var(--color-base-300);
     transition: {
         property: background-color;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     @media screen and (max-width: v.$screen-4xl) {
@@ -37,7 +37,7 @@
         margin: calc(var(--font-size) / 2) var(--font-size);
         transition: {
             property: margin, min-width;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         @media screen and (max-width: v.$screen-4xl) {
@@ -46,13 +46,11 @@
         > .metadata {
             text-align: center;
             line-height: 1.5;
-            opacity: 0;
             animation: {
                 name: fade;
                 timing-function: ease-in-out;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 iteration-count: 1;
-                fill-mode: forwards;
             }
             @keyframes fade {
                 0% {
@@ -70,7 +68,7 @@
                 font-size: calc(var(--font-size) - 0.25rem);
                 transition: {
                     property: font-size;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
             }
@@ -78,7 +76,7 @@
                 font-size: calc(var(--font-size) - 0.35rem);
                 transition: {
                     property: font-size;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
             }
@@ -93,7 +91,7 @@
             margin-top: calc(var(--font-size) / 2);
             transition: {
                 property: font-size, margin-top;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             @media screen and (max-width: v.$screen-4xl) {
@@ -110,7 +108,7 @@
                 align-items: center;
                 transition: {
                     property: color;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
                 &:hover {
@@ -131,7 +129,7 @@
             background-color: var(--color-base-200);
             transition: {
                 property: background-color;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             @media screen and (max-width: v.$screen-4xl) {
@@ -144,7 +142,7 @@
                 background-color: var(--color-primary);
                 transition: {
                     property: background-color;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
             }

@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import type { JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { Image } from "@/components/image";
@@ -14,8 +14,18 @@ function handleCanPlay(event: JSX.TargetedEvent<HTMLAudioElement>) {
 }
 
 export function MusicPlayer() {
+    // TODO 淡出动画
     const index = useSignal(0);
     const isPaused = useSignal(true);
+
+    const audioSrc = useComputed(() => musicList[index.value]!.src);
+    const musicTitle = useComputed(() => musicList[index.value]!.title);
+    const musicAuthor = useComputed(() => musicList[index.value]!.author);
+    const coverSrc = useComputed(() => musicList[index.value]!.cover);
+    const playTitle = useComputed(() => (isPaused.value ? "播放" : "暂停"));
+    const playIcon = useComputed(() =>
+        isPaused.value ? <IconPlay /> : <IconPause />,
+    );
 
     const cover = useRef<HTMLButtonElement | null>(null);
     const audio = useRef<HTMLAudioElement | null>(null);
@@ -106,7 +116,7 @@ export function MusicPlayer() {
                 ref={audio}
                 loop={false}
                 preload="metadata"
-                src={musicList[index.value]!.src}
+                src={audioSrc}
                 onPlay={handleOnPlay}
                 onPause={handleOnPause}
                 onEnded={handleNext}
@@ -115,12 +125,8 @@ export function MusicPlayer() {
             />
             <div class={style.info}>
                 <div class={style.metadata}>
-                    <div class={style.title}>
-                        {musicList[index.value]!.title}
-                    </div>
-                    <div class={style.author}>
-                        {musicList[index.value]!.author}
-                    </div>
+                    <div class={style.title}>{musicTitle}</div>
+                    <div class={style.author}>{musicAuthor}</div>
                 </div>
                 <div class={style.controls}>
                     <button
@@ -132,10 +138,10 @@ export function MusicPlayer() {
                     </button>
                     <button
                         type="button"
-                        title={isPaused.value ? "播放" : "暂停"}
+                        title={playTitle}
                         onClick={handleTogglePlay}
                     >
-                        {isPaused.value ? <IconPlay /> : <IconPause />}
+                        {playIcon}
                     </button>
                     <button type="button" title="下一首" onClick={handleNext}>
                         <IconNext />
@@ -153,14 +159,14 @@ export function MusicPlayer() {
             <button
                 ref={cover}
                 type="button"
-                title={isPaused.value ? "播放" : "暂停"}
+                title={playTitle}
                 onClick={handleTogglePlay}
             >
                 <Image
                     class={style.cover}
-                    src={musicList[index.value]!.cover}
+                    src={coverSrc}
                     alt="专辑封面"
-                    title={musicList[index.value]!.title}
+                    title={musicTitle}
                 />
             </button>
         </div>

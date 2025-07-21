@@ -9,7 +9,7 @@
     }
     transition : {
         property: padding-left, padding-right, background-color;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
 
@@ -27,7 +27,7 @@
             transition: {
                 property: height;
                 timing-function: ease-in-out;
-                duration: 0.25s;
+                duration: var(--duration-fast);
             }
             &:not(:last-child)::after {
                 content: "/";

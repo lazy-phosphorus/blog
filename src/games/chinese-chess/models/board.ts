@@ -55,13 +55,25 @@ export class Board {
         stage.addChild(this.__self);
         this.__ticker.minFPS = 30;
         this.__ticker.maxFPS = 60;
-        this.__fromBox = new SelectBox(new Point(1, 1), __blockSize, stage);
-        this.__toBox = new SelectBox(new Point(1, 1), __blockSize, stage);
-        this.__selectedBox = new SelectBox(new Point(1, 1), __blockSize, stage);
         this.__situation = new Situation(
             this.__blockSize,
             stage,
             this.__clickHandler.bind(this),
+        );
+        this.__fromBox = new SelectBox(
+            new Point(1, 1),
+            __blockSize,
+            this.__situation.container,
+        );
+        this.__toBox = new SelectBox(
+            new Point(1, 1),
+            __blockSize,
+            this.__situation.container,
+        );
+        this.__selectedBox = new SelectBox(
+            new Point(1, 1),
+            __blockSize,
+            this.__situation.container,
         );
     }
 
@@ -90,6 +102,14 @@ export class Board {
         this.__selectedPiece = target;
         this.__selectedBox.position = target.position;
         this.__selectedBox.visible = true;
+    }
+
+    public set isRedSide(value: boolean) {
+        this.__situation.isRedSide = value;
+    }
+
+    public set isDeductive(value: boolean) {
+        this.__situation.isDeductive = value;
     }
 
     public regret() {
@@ -123,7 +143,6 @@ export class Board {
     }
 
     private __clickHandler(target: Piece) {
-        console.log(target);
         if (target.bloc === this.__turn) {
             this.selected = target;
             return;

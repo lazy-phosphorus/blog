@@ -19,21 +19,19 @@
         padding: 0.25rem;
         display: flex;
         justify-content: space-between;
-        transform: translateY(-100%);
         pointer-events: none;
         z-index: 114514;
         height: var(--header-height);
         transition: {
             property: height;
             timing-function: ease-in-out;
-            duration: 0.25s;
+            duration: var(-duration-fast);
         }
         animation: {
             name: slide;
-            duration: 0.5s;
+            duration: var(--duration-normal);
             iteration-count: 1;
             timing-function: ease-in-out;
-            fill-mode: forwards;
         }
         @keyframes slide {
             0% {
@@ -61,7 +59,7 @@
         }
         transition: {
             property: padding-top;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         @media screen and (max-width: v.$screen-4xl) {

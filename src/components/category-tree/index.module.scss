@@ -10,7 +10,7 @@
     top: var(--header-height);
     transition: {
         property: top;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
 }
@@ -28,16 +28,15 @@
     }
     transition: {
         property: gap, margin-top, margin-bottom;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     &:not(:first-child) {
         animation: {
             name: fade;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             iteration-count: 1;
             timing-function: ease-in-out;
-            fill-mode: forwards;
         }
         @keyframes fade {
             0% {
@@ -71,7 +70,7 @@
             padding: calc(var(--font-size) / 2) var(--font-size);
             transition: {
                 property: background-color, color, padding;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             &:hover {

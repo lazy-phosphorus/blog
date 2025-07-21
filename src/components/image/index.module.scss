@@ -9,7 +9,7 @@
         height: 100%;
         transition: {
             property: opacity;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &.hidden {

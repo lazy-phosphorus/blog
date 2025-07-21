@@ -9,7 +9,7 @@ import { Notice } from "@/components/notice";
 import { dispatchExceptionEvent } from "@/events/exception";
 import { AsyncException } from "@/exception/async-exception";
 import { RuntimeException } from "@/exception/runtime-exception";
-import { isControlPanelVisible } from "@/signals/is-control-panel-visible";
+import { useGloablSignal } from "@/hooks/useGlobalSignal";
 import { Header } from "./header";
 import style from "./index.module.scss";
 
@@ -54,6 +54,8 @@ function handleRejection(this: Window, event: PromiseRejectionEvent) {
 }
 
 export function EuropaUniversalis({ children }: PropsType) {
+    const { isControlPanelVisible } = useGloablSignal();
+
     useEffect(() => {
         addEventListener("error", handleError);
         addEventListener("unhandledrejection", handleRejection);
@@ -66,7 +68,7 @@ export function EuropaUniversalis({ children }: PropsType) {
 
     const handleAvatarClick = useCallback(() => {
         isControlPanelVisible.value = !isControlPanelVisible.peek();
-    }, []);
+    }, [isControlPanelVisible]);
 
     // TODO footer
     return (

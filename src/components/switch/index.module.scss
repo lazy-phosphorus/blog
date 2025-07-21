@@ -1,0 +1,36 @@
+.switch {
+    display: flex;
+    border-radius: 100vmax;
+    padding: 0.25rem;
+    box-sizing: border-box;
+    cursor: pointer;
+    appearance: unset;
+    width: calc(var(--font-size) * 3);
+    height: calc(var(--font-size) * 1.5);
+    background-color: gray;
+    transition: {
+        property: width, height, background-color;
+        duration: var(--duration-fast);
+        timing-function: ease-in-out;
+    }
+    &:checked {
+        background-color: var(--color-primary);
+        &::after {
+            margin-left: calc(var(--font-size) * 1.5);
+        }
+    }
+    &::after {
+        content: "";
+        display: block;
+        height: 100%;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        margin-left: 0;
+        background-color: var(--color-base-300);
+        transition: {
+            property: background-color, margin-left;
+            duration: var(--duration-fast);
+            timing-function: ease-in-out;
+        }
+    }
+}

@@ -9,7 +9,7 @@
     top: var(--header-height);
     transition: {
         property: top;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     > ul {
@@ -20,7 +20,7 @@
         gap: var(--font-size);
         transition: {
             property: gap;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         > li {

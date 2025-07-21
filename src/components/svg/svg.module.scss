@@ -75,7 +75,7 @@
     transform-origin: center;
     animation: {
         name: stuck;
-        duration: 0.5s;
+        duration: var(--duration-normal);
         timing-function: linear;
         iteration-count: infinite;
     }

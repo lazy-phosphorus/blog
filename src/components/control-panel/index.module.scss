@@ -1,24 +1,8 @@
 @use "@/assets/scss/variables.scss" as v;
 
 .control {
-    position: fixed;
-    left: 0.25rem;
-    bottom: 0.25rem;
-    height: auto;
     width: 40rem;
     max-width: calc(100% - 0.5rem);
-    top: var(--header-height);
-    transition: {
-        property: top, transform;
-        duration: 0.25s;
-        timing-function: ease-in-out;
-    }
-    @media screen and (max-width: v.$screen-4xl) {
-        top: calc(var(--header-height) + 0.25rem);
-    }
-    &.hidden {
-        transform: translateX(calc(-100% - 0.25rem));
-    }
     > button {
         position: absolute;
         cursor: pointer;
@@ -32,7 +16,7 @@
         background-color: var(--color-primary);
         transition: {
             property: padding, top, right, font-size, background-color;
-            duration: 0.25s;
+            duration: var(-duration-fast);
             timing-function: ease-in-out;
         }
         @keyframes rotate {
@@ -69,7 +53,7 @@
             margin-bottom: calc(var(--font-size) + 0.5rem);
             transition: {
                 property: font-size, margin-bottom;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
         }
@@ -77,7 +61,7 @@
             margin-bottom: calc(var(--font-size) * 3);
             transition: {
                 property: margin-bottom;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             > h2 {
@@ -86,7 +70,7 @@
                 margin-bottom: calc(var(--font-size) / 2 + 0.125rem);
                 transition: {
                     property: font-size, margin-bottom;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
             }
@@ -97,7 +81,7 @@
                 gap: calc(var(--font-size) / 2) calc(var(--font-size) * 2);
                 transition: {
                     property: gap;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
                 > div {
@@ -114,7 +98,7 @@
                         line-height: 1;
                         transition: {
                             property: font-size;
-                            duration: 0.25s;
+                            duration: var(--duration-fast);
                             timing-function: ease-in-out;
                         }
                     }
@@ -132,7 +116,7 @@
                         }
                         transition: {
                             property: width, background-color, outline-color;
-                            duration: 0.25s;
+                            duration: var(--duration-fast);
                             timing-function: ease-in-out;
                         }
                     }
@@ -157,7 +141,7 @@
         bottom: var(--font-size);
         transition: {
             property: gap, font-size, bottom;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         > button {
@@ -167,7 +151,7 @@
             padding: calc(var(--font-size) / 4) var(--font-size);
             transition: {
                 property: padding, background-color, color;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             &[type="submit"] {

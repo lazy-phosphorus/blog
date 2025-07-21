@@ -17,12 +17,12 @@
     height: calc(100% - var(--header-height));
     transition: {
         property: height;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     animation: {
         name: fade;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
         iteration-count: 1;
     }
@@ -57,7 +57,7 @@
             }
             transition: {
                 property: height, background-color, border-color;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
         }
@@ -67,7 +67,7 @@
             font-size: calc(var(--font-size) + 0.75rem);
             transition: {
                 property: font-size;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
         }
@@ -80,7 +80,7 @@
             );
             transition: {
                 property: color;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             @media (prefers-color-scheme: light) {
@@ -98,7 +98,7 @@
             }
             transition: {
                 property: margin-top, margin-bottom;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
         }
@@ -108,7 +108,7 @@
             gap: calc(var(--font-size) / 2);
             transition: {
                 property: gap, font-size;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             &.icons {
@@ -129,7 +129,7 @@
                     margin-right: calc(var(--font-size) / 2);
                     transition: {
                         property: margin-right;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -142,14 +142,14 @@
             gap: var(--font-size);
             transition: {
                 property: gap;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             > svg {
                 font-size: calc(var(--font-size) + 0.5rem);
                 transition: {
                     property: font-size;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
             }
@@ -164,7 +164,7 @@
         margin-top: var(--font-size);
         transition: {
             property: background-color, color, padding, margin-top;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &:hover {

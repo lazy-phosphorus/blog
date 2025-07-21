@@ -9,8 +9,6 @@
     },
     "dependencies": {
         "@fontsource-variable/fira-code": "^5.2.6",
-        "@fontsource-variable/noto-sans-sc": "^5.2.6",
-        "@fontsource-variable/noto-serif-sc": "^5.2.6",
         "@preact/signals": "^2.2.1",
         "pixi.js": "^8.11.0",
         "preact": "^10.26.9",

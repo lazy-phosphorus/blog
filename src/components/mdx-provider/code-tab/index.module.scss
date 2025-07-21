@@ -8,7 +8,7 @@
     }
     transition: {
         property: margin-left, margin-right, box-shadow;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     > div:first-child {
@@ -18,7 +18,7 @@
         padding: calc(var(--font-size) / 2);
         transition: {
             property: gap, padding;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         > button {
@@ -35,7 +35,7 @@
             padding: calc(var(--font-size) / 4) calc(var(--font-size) / 2);
             transition: {
                 property: color, background-color, gap, padding;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
             &:hover {

@@ -8,7 +8,7 @@
     }
     transition: {
         property: text-indent, margin-left, margin-right;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
 }

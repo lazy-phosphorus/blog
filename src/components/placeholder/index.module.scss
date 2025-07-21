@@ -7,7 +7,7 @@
     background-color: var(--color-base-300);
     transition: {
         property: opacity, background-color;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     &::before {
@@ -21,7 +21,7 @@
         left: 0;
         transition: {
             property: opacity, background-color;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         animation: {

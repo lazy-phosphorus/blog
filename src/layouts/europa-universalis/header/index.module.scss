@@ -16,7 +16,7 @@
         margin-right: calc(var(--font-size) / 2);
         transition: {
             property: background-color, margin-right;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &::after {
@@ -41,7 +41,7 @@
                     translateX(calc(var(--header-height) * 1.5));
                 transition: {
                     property: transform;
-                    duration: 0.5s;
+                    duration: var(--duration-normal);
                     timing-function: linear;
                 }
             }

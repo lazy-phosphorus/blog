@@ -9,13 +9,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    opacity: 0;
     animation: {
         name: fade;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         iteration-count: 1;
         timing-function: ease-in-out;
-        fill-mode: forwards;
     }
     @keyframes fade {
         0% {

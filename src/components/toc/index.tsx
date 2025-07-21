@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import { useCallback, useEffect } from "preact/hooks";
 import { Link } from "@/components/link";
 import { usePageContext } from "@/hooks/use-page-context";
@@ -39,6 +39,13 @@ export function Toc() {
     const { data, urlPathname } = usePageContext<PostDataType>();
     const toc = data.posts.find((v) => urlPathname.includes(v.dirname))!.toc;
 
+    const asideClass = useComputed(
+        () => `${style.toc}${isClosed.value ? ` ${style.closed}` : ""}`,
+    );
+    const buttonTitle = useComputed(() =>
+        isClosed.value ? "展开目录" : "关闭目录",
+    );
+
     const handleToggleToc = useCallback(
         () => (isClosed.value = !isClosed.peek()),
         [isClosed],
@@ -58,14 +65,8 @@ export function Toc() {
     }, [handleResize]);
 
     return (
-        <aside
-            class={`${style.toc}${isClosed.value ? ` ${style.closed}` : ""}`}
-        >
-            <button
-                type="button"
-                title={isClosed.value ? "展开目录" : "关闭目录"}
-                onClick={handleToggleToc}
-            >
+        <aside class={asideClass}>
+            <button type="button" title={buttonTitle} onClick={handleToggleToc}>
                 <IconForward class={style.svg} />
             </button>
             <div>

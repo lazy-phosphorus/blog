@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import type { JSX } from "preact";
 import { useCallback, useRef } from "preact/hooks";
 import { Image } from "@/components/image";
@@ -19,9 +19,14 @@ function handleImageMagnify(event: JSX.TargetedWheelEvent<HTMLDivElement>) {
 }
 
 export function img({ src, title, alt }: PropsType) {
+    // TODO 退出动画
     const isExpand = useSignal(false);
     const isMouseDown = useRef(false);
     const prevPoint = useRef<{ x: number; y: number } | null>(null);
+
+    const maskClass = useComputed(
+        () => `${style.mask}${isExpand.value ? "" : ` ${style.hidden}`}`,
+    );
 
     const handleImageZoomIn = useCallback(
         () => (isExpand.value = true),
@@ -84,10 +89,7 @@ export function img({ src, title, alt }: PropsType) {
                 </button>
                 <figcaption>{title}</figcaption>
             </figure>
-            <Mask
-                class={`${style.mask}${isExpand.value ? "" : ` ${style.hidden}`}`}
-                onClick={handleImageZoomOut}
-            >
+            <Mask class={maskClass} onClick={handleImageZoomOut}>
                 <Image
                     src={src}
                     alt={alt}

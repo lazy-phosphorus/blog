@@ -1,16 +1,14 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import type { Signal } from "@preact/signals";
-import { useCallback } from "preact/hooks";
+import { useCallback, useMemo } from "preact/hooks";
 import { Link } from "@/components/link";
-import { DataConsumer } from "@/hooks/use-data";
+import { useData } from "@/hooks/use-data";
 import { Card } from "@/layouts/card";
 import type { CategoryType } from "@/types/category";
 import type { PostDataType } from "@/types/post-data";
 import { draftFilter } from "@/utils/draft-filter";
 import { categoryTree } from "@/utils/post-statistics";
 import style from "./index.module.scss";
-
-const PostConsumer = DataConsumer<PostDataType>;
 
 type PropsType = Readonly<{
     categories: CategoryType[];
@@ -54,32 +52,34 @@ function CategoryList({ categories, counter, indexes, depth }: PropsType) {
 }
 
 export function CategoryTree() {
+    const { posts } = useData<PostDataType>();
+    const { tree, counter } = useMemo(
+        () => categoryTree(draftFilter(posts)),
+        [posts],
+    );
+
     const indexes = useSignal<number[]>([]);
+    const lists = useComputed(() =>
+        indexes.value.map((v, i) => (
+            <CategoryList
+                depth={i + 1}
+                key={tree[v]!.name}
+                indexes={indexes}
+                categories={tree[v]!.children}
+                counter={counter}
+            />
+        )),
+    );
 
     return (
-        <PostConsumer>
-            {({ posts }) => {
-                const { tree, counter } = categoryTree(draftFilter(posts));
-                return (
-                    <Card class={style.card}>
-                        <CategoryList
-                            depth={0}
-                            indexes={indexes}
-                            categories={tree}
-                            counter={counter}
-                        />
-                        {indexes.value.map((v, i) => (
-                            <CategoryList
-                                depth={i + 1}
-                                key={tree[v]!.name}
-                                indexes={indexes}
-                                categories={tree[v]!.children}
-                                counter={counter}
-                            />
-                        ))}
-                    </Card>
-                );
-            }}
-        </PostConsumer>
+        <Card class={style.card}>
+            <CategoryList
+                depth={0}
+                indexes={indexes}
+                categories={tree}
+                counter={counter}
+            />
+            {lists}
+        </Card>
     );
 }

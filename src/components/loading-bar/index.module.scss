@@ -9,7 +9,7 @@
     z-index: 1145141919810;
     transition: {
         property: opacity;
-        duration: 0.5s;
+        duration: var(--duration-normal);
         timing-function: ease-in-out;
     }
     &.finish {
@@ -23,7 +23,7 @@
         background-color: var(--color-secondary);
         transition: {
             property: background-color;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }

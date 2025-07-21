@@ -7,7 +7,7 @@
     }
     transition: {
         property: font-size, margin-top, margin-bottom;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
 }
@@ -29,7 +29,7 @@
         property:
             margin-top, margin-bottom, border-left-color, color,
             background-color;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     &.info {
@@ -56,7 +56,7 @@
         }
         transition: {
             property: padding-left, padding-right, font-size;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }
@@ -70,7 +70,7 @@
         }
         transition: {
             property: margin-top, margin-bottom, padding-right;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         > * {

@@ -11,7 +11,7 @@
     }
     transition: {
         property: margin-left, margin-right, box-shadow;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     > div {
@@ -28,7 +28,7 @@
         }
         transition: {
             property: padding;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }

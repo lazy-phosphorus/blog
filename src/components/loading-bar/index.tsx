@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import {
     registerLoadingEventHandler,
@@ -10,6 +10,8 @@ import style from "./index.module.scss";
 export function LoadingBar() {
     const width = useSignal(0);
     const startTimestampRef = useRef(-1);
+
+    const divStyle = useComputed(() => ({ "--width": `${width.value}%` }));
 
     const animation = useCallback(
         (timestamp: DOMHighResTimeStamp) => {
@@ -59,7 +61,7 @@ export function LoadingBar() {
             class={`${style.loading}${width.value === 100 ? ` ${style.finish}` : ""}`}
             onTransitionEnd={handleHidden}
         >
-            <div style={{ "--width": `${width.value}%` }} />
+            <div style={divStyle} />
         </div>
     );
 }

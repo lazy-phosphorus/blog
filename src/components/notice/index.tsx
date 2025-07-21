@@ -1,4 +1,4 @@
-import { batch, useSignal } from "@preact/signals";
+import { batch, useComputed, useSignal } from "@preact/signals";
 import type { ComponentChildren, JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { Dialog } from "@/components/dialog";
@@ -132,48 +132,50 @@ export function Notice() {
         [dialogRef],
     );
 
+    const eventLi = useComputed(() =>
+        events.value.map(({ mini, full, key, level, duration }) => (
+            <li
+                key={key}
+                class={style[level]}
+                onTransitionEnd={(e) => handleExited(e, key)}
+            >
+                <div
+                    class={full === void 0 ? style.plain : void 0}
+                    onClick={
+                        full === void 0
+                            ? void 0
+                            : (e) => handleOpenDialog(e, full, level)
+                    }
+                >
+                    {mini}
+                    <div
+                        class={`${style.counter}${duration === void 0 ? ` ${style.infinite}` : ""}`}
+                        style={
+                            duration === void 0
+                                ? void 0
+                                : { "--duration": `${duration}s` }
+                        }
+                        onAnimationEnd={handleStartExit}
+                    />
+                    <button
+                        class={style.closer}
+                        type="button"
+                        title="关闭"
+                        onClick={handleStartExit}
+                    >
+                        <IconClose />
+                    </button>
+                </div>
+            </li>
+        )),
+    );
+
     return (
         <>
             <Dialog dialogRef={dialogRef} closeText={closeText}>
                 {dialogContent}
             </Dialog>
-            <ul class={style.notice}>
-                {events.value.map(({ mini, full, key, level, duration }) => (
-                    <li
-                        key={key}
-                        class={style[level]}
-                        onTransitionEnd={(e) => handleExited(e, key)}
-                    >
-                        <div
-                            class={full === void 0 ? style.plain : void 0}
-                            onClick={
-                                full === void 0
-                                    ? void 0
-                                    : (e) => handleOpenDialog(e, full, level)
-                            }
-                        >
-                            {mini}
-                            <div
-                                class={`${style.counter}${duration === void 0 ? ` ${style.infinite}` : ""}`}
-                                style={
-                                    duration === void 0
-                                        ? void 0
-                                        : { "--duration": `${duration}s` }
-                                }
-                                onAnimationEnd={handleStartExit}
-                            />
-                            <button
-                                class={style.closer}
-                                type="button"
-                                title="关闭"
-                                onClick={handleStartExit}
-                            >
-                                <IconClose />
-                            </button>
-                        </div>
-                    </li>
-                ))}
-            </ul>
+            <ul class={style.notice}>{eventLi}</ul>
         </>
     );
 }

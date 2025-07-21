@@ -7,7 +7,7 @@
     color: var(--color-primary);
     transition: {
         property: color, background-color, background-size;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     &:hover {

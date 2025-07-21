@@ -9,15 +9,14 @@
     color: var(--color-base-content);
     transition: {
         property: background-color, color;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     animation: {
         name: fade;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
         iteration-count: 1;
-        fill-mode: forwards;
     }
     @keyframes fade {
         0% {
@@ -41,7 +40,7 @@
         }
         transition: {
             property: font-size, margin-top, margin-bottom;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }
@@ -54,7 +53,7 @@
         }
         transition: {
             property: margin-top, margin-bottom;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         > code {
@@ -74,7 +73,7 @@
         padding: calc(var(--font-size) / 4) calc(var(--font-size) / 2);
         transition: {
             property: background-color, color, margin-top, padding;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &:hover {

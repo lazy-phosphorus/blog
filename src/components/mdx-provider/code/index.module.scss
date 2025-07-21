@@ -6,7 +6,7 @@ code {
                 margin-left: calc(var(--font-size) * 3);
                 transition: {
                     property: margin-left;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
                 &::before {
@@ -28,7 +28,7 @@ code {
                     }
                     transition: {
                         property: width, padding-left;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -42,7 +42,7 @@ code {
                     background-color: rgba(from #d4d4d4 r g b / 0.25);
                     transition: {
                         property: background-color;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -60,7 +60,7 @@ code {
                     );
                     transition: {
                         property: color, background-color;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -72,7 +72,7 @@ code {
                     }
                     transition: {
                         property: text-decoration-color;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -83,7 +83,7 @@ code {
                     }
                     transition: {
                         property: text-decoration-color;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -95,7 +95,7 @@ code {
                     }
                     transition: {
                         property: text-decoration-color;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -107,7 +107,7 @@ code {
                     }
                     transition: {
                         property: text-decoration-color;
-                        duration: 0.25s;
+                        duration: var(--duration-fast);
                         timing-function: ease-in-out;
                     }
                 }
@@ -154,7 +154,7 @@ code {
         property:
             top, right, height, width, font-size, background-color, color,
             opacity;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     &:hover {

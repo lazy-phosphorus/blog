@@ -1,0 +1,75 @@
+.drawer {
+    width: 20rem;
+    max-width: calc(100% - 0.5rem);
+    > .card {
+        height: 100%;
+        width: 100%;
+        > h1 {
+            text-align: center;
+            font-weight: bold;
+            font-size: calc(var(--font-size) + 1rem);
+            margin-bottom: calc(var(--font-size) + 1rem);
+            transition: {
+                property: font-size, margin-bottom;
+                duration: var(--duration-fast);
+                timing-function: ease-in-out;
+            }
+        }
+        > form {
+            height: 100%;
+            font-size: var(--font-size);
+            transition: {
+                property: font-size;
+                duration: var(--duration-fast);
+                timing-function: ease-in-out;
+            }
+            > div {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: calc(var(--font-size) / 2);
+                transition: {
+                    property: margin-bottom;
+                    duration: var(--duration-fast);
+                    timing-function: ease-in-out;
+                }
+                &.buttons {
+                    position: absolute;
+                    width: 100%;
+                    left: 0;
+                    box-sizing: border-box;
+                    margin-bottom: unset;
+                    justify-content: center;
+                    bottom: var(--font-size);
+                    padding: {
+                        left: var(--font-size);
+                        right: var(--font-size);
+                    }
+                    transition: {
+                        property: bottom, padding-left, padding-right;
+                        duration: var(--duration-fast);
+                        timing-function: ease-in-out;
+                    }
+                    > button {
+                        display: block;
+                        border-radius: 0.25rem;
+                        cursor: pointer;
+                        padding: calc(var(--font-size) / 4) var(--font-size);
+                        background-color: var(--color-primary);
+                        color: var(--color-primary-content);
+                        transition: {
+                            property: padding, background-color, color;
+                            duration: var(--duration-fast);
+                            timing-function: ease-in-out;
+                        }
+                        &:hover {
+                            background-color: rgb(
+                                from var(--color-primary) calc(r - 50)
+                                    calc(g - 50) calc(b - 50)
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

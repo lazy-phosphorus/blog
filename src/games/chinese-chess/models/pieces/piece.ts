@@ -1,10 +1,10 @@
 import {
     Assets,
-    BitmapText,
     ColorMatrixFilter,
     Container,
     Point,
     Sprite,
+    Text,
     TextStyle,
     Texture,
 } from "pixi.js";
@@ -28,10 +28,10 @@ export interface IMovable {
 }
 
 export abstract class Piece implements IMovable {
-    protected readonly __self = new Container({
+    private readonly __self = new Container({
         eventMode: "passive",
+        origin: 0.5,
     });
-
     private readonly __background = new Sprite({
         eventMode: "none",
         texture: Texture.EMPTY,
@@ -43,10 +43,10 @@ export abstract class Piece implements IMovable {
         eventMode: "static",
         texture: Texture.EMPTY,
     });
-    private readonly __text = new BitmapText({
+    private readonly __text = new Text({
         anchor: 0.5,
         style: new TextStyle({
-            fontFamily: ["Fira Code Variable", "Noto Sans SC Variable"],
+            fontFamily: ["sans-serfi"],
             align: "center",
         }),
     });
@@ -88,6 +88,10 @@ export abstract class Piece implements IMovable {
         );
     }
 
+    public get angle() {
+        return this.__self.angle;
+    }
+
     public set position(point: Point) {
         this.__self.position = boardPoint2ScreenPoint(point, this.__blockSize);
     }
@@ -101,6 +105,10 @@ export abstract class Piece implements IMovable {
 
         this.__blockSize = value;
         this.resize();
+    }
+
+    public set angle(value: number) {
+        this.__self.angle = value;
     }
 
     public onClick(handler: (event: Piece) => void) {
@@ -128,7 +136,6 @@ export abstract class Piece implements IMovable {
         this.position = to;
         return true;
     }
-
     private resize() {
         this.__background.height = this.__blockSize;
         this.__background.width = this.__blockSize;

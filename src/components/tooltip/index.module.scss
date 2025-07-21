@@ -26,7 +26,7 @@
             property:
                 opacity, background-color, color, padding-left, padding-right,
                 transform;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &.top {
@@ -59,7 +59,7 @@
             background-color: var(--color-info);
             transition: {
                 property: background-color;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
         }

@@ -1,5 +1,4 @@
-import { Point } from "pixi.js";
-import type { Container } from "pixi.js";
+import { Container, Point } from "pixi.js";
 import { Bishop } from "./pieces/bishop";
 import { Cannon } from "./pieces/cannon";
 import { General } from "./pieces/general";
@@ -12,13 +11,22 @@ import { Rook } from "./pieces/rook";
 import { Space } from "./pieces/space";
 
 export class Situation {
+    private readonly __container = new Container({});
     private readonly __battleField: Piece[][] = [];
+    private __isRedSide = true;
+    private __isDeductive = true;
+
     constructor(
         private __blockSize: number,
         private readonly __stage: Container,
         private readonly __clickHandler: (event: Piece) => void,
     ) {
         this.__initialize();
+        this.__stage.addChild(this.__container);
+    }
+
+    public get container() {
+        return this.__container;
     }
 
     public set blockSize(blockSize: number) {
@@ -28,6 +36,51 @@ export class Situation {
             }
         }
         this.__blockSize = blockSize;
+    }
+
+    public set isRedSide(value: boolean) {
+        this.__container.scale.y = value ? 1 : -1;
+        this.__container.scale.x = value ? 1 : -1;
+        this.__container.pivot.y = value ? 0 : this.__container.height;
+        this.__container.pivot.x = value ? 0 : this.__container.width;
+        for (let i = 0; i < this.__battleField.length; i++) {
+            for (let j = 0; j < this.__battleField[i]!.length; j++) {
+                if (this.__battleField[i]![j]!.bloc === Bloc.SPACE) continue;
+
+                if (value)
+                    this.__battleField[i]![j]!.angle =
+                        this.__battleField[i]![j]!.bloc === Bloc.BLACK &&
+                        !this.__isDeductive
+                            ? 180
+                            : 0;
+                else
+                    this.__battleField[i]![j]!.angle =
+                        this.__battleField[i]![j]!.bloc === Bloc.RED &&
+                        !this.__isDeductive
+                            ? 0
+                            : 180;
+            }
+        }
+        this.__isRedSide = value;
+    }
+
+    public set isDeductive(value: boolean) {
+        for (let i = 0; i < this.__battleField.length; i++) {
+            for (let j = 0; j < this.__battleField[i]!.length; j++) {
+                if (this.__battleField[i]![j]!.bloc === Bloc.SPACE) continue;
+
+                if (value)
+                    this.__battleField[i]![j]!.angle = this.__isRedSide
+                        ? 0
+                        : 180;
+                else
+                    this.__battleField[i]![j]!.angle =
+                        this.__battleField[i]![j]!.bloc === Bloc.BLACK
+                            ? 180
+                            : 0;
+            }
+        }
+        this.__isDeductive = value;
     }
 
     public getBlocOfPieceAt({ x, y }: Point) {
@@ -43,7 +96,7 @@ export class Situation {
             const space = new Space(this.__blockSize);
             space.position = from;
             space.onClick(this.__clickHandler);
-            space.addToStage(this.__stage);
+            space.addToStage(this.__container);
             this.__battleField[from.y - 1]![from.x - 1] = space;
             temp.removeFromStage();
             return temp;
@@ -65,7 +118,7 @@ export class Situation {
             temp.removeFromStage();
             removed.position = to;
             this.__battleField[to.y - 1]![to.x - 1] = removed;
-            removed.addToStage(this.__stage);
+            removed.addToStage(this.__container);
         } else {
             temp.position = to;
             this.__battleField[to.y - 1]![to.x - 1] = temp;
@@ -202,12 +255,7 @@ export class Situation {
             for (let j = 0; j < this.__battleField[i]!.length; j++) {
                 this.__battleField[i]![j]!.position = new Point(j + 1, i + 1);
                 this.__battleField[i]![j]!.onClick(this.__clickHandler);
-            }
-        }
-
-        for (let i = 0; i < this.__battleField.length; i++) {
-            for (let j = 0; j < this.__battleField[i]!.length; j++) {
-                this.__battleField[i]![j]!.addToStage(this.__stage);
+                this.__battleField[i]![j]!.addToStage(this.__container);
             }
         }
     }

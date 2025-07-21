@@ -1,0 +1,35 @@
+@use "@/assets/scss/variables.scss" as v;
+
+.drawer {
+    position: fixed;
+    z-index: 100;
+    bottom: 0.25rem;
+    height: auto;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    top: var(--header-height);
+    transition: {
+        property: transform, top;
+        duration: var(--duration-fast);
+        timing-function: ease-in-out;
+    }
+    @media screen and (max-width: v.$screen-4xl) {
+        top: calc(var(--header-height) + 0.25rem);
+    }
+    &.left {
+        left: 0.25rem;
+        &.closed {
+            transform: translateX(calc(-100% - 0.25rem));
+        }
+    }
+    &.right {
+        right: 0.25rem;
+        &.closed {
+            transform: translateX(calc(100% + 0.25rem));
+        }
+    }
+}
+
+.hidden {
+    display: none;
+}

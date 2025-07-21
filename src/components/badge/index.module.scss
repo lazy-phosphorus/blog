@@ -16,7 +16,7 @@
         box-shadow: 0 0 0.25rem 1px var(--color-base-300);
         transition: {
             property: padding, background-color, color, box-shadow;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }
@@ -41,7 +41,7 @@
                 padding-left font-size,
                 background-color,
                 color;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }

@@ -12,14 +12,14 @@
     top: var(--header-height);
     transition: {
         property: top;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     > .svg {
         font-size: calc(var(--font-size) * 7.5);
         transition: {
             property: font-size;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }
@@ -32,7 +32,7 @@
         margin-top: var(--font-size);
         transition: {
             property: background-color, color, padding, margin-top;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &:hover {

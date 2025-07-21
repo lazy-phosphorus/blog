@@ -1,6 +1,9 @@
+import { effect, useSignal } from "@preact/signals";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { PlaceHolder } from "@/components/placeholder";
 import { create } from "../app";
+import { SettingsForm } from "./components/settings-form";
+import { useSettings } from "./hooks/use-settings";
 import style from "./index.module.scss";
 import { Board } from "./models/board";
 
@@ -11,6 +14,9 @@ function calcBlockSize(width: number, height: number) {
 export function ChineseChess() {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const boardRef = useRef<Board | null>(null);
+
+    const { isRedSide, isDeductiveMode } = useSettings();
+    const isSettingsOpen = useSignal(false);
 
     const handleResize = useCallback(() => {
         const chess = containerRef.current!.parentElement as HTMLDivElement;
@@ -30,6 +36,13 @@ export function ChineseChess() {
         handleResize();
         addEventListener("resize", handleResize);
 
+        effect(() => {
+            boardRef.current!.isRedSide = isRedSide.value;
+        });
+        effect(() => {
+            boardRef.current!.isDeductive = isDeductiveMode.value;
+        });
+
         containerRef.current!.classList.add(style.ready!);
 
         return () => {
@@ -46,6 +59,11 @@ export function ChineseChess() {
         boardRef.current!.reset();
     }, [boardRef]);
 
+    const handleOpenSettings = useCallback(
+        () => (isSettingsOpen.value = true),
+        [isSettingsOpen],
+    );
+
     return (
         <div class={style.chess}>
             <PlaceHolder class={style.placeholder} />
@@ -57,8 +75,16 @@ export function ChineseChess() {
                     <button type="button" title="重置" onClick={handleReset}>
                         重置
                     </button>
+                    <button
+                        type="button"
+                        title="设置"
+                        onClick={handleOpenSettings}
+                    >
+                        设置
+                    </button>
                 </div>
             </div>
+            <SettingsForm isOpen={isSettingsOpen} />
         </div>
     );
 }

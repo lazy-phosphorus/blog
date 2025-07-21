@@ -1,6 +1,6 @@
 import { useSignal } from "@preact/signals";
 import type { ComponentChildren, JSX } from "preact";
-import { useCallback } from "preact/hooks";
+import { useCallback, useMemo } from "preact/hooks";
 import style from "./index.module.scss";
 import { Label } from "./label";
 
@@ -12,7 +12,8 @@ type Labels = Array<{ label: string; language: string }>;
 
 export function CodeTab({ children, buttons }: PropsType) {
     const index = useSignal(0);
-    const labels = JSON.parse(buttons) as Labels;
+
+    const labels = useMemo(() => JSON.parse(buttons) as Labels, [buttons]);
 
     const handleTabsShift = useCallback(
         (event: JSX.TargetedMouseEvent<HTMLButtonElement>, i: number) => {

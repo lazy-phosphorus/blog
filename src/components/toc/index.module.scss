@@ -9,15 +9,14 @@
     color: var(--color-base-content);
     transition: {
         property: width, height, top, color, transform;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     animation: {
         name: fade;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
         iteration-count: 1;
-        fill-mode: forwards;
     }
     @keyframes fade {
         0% {
@@ -52,7 +51,7 @@
         color: var(--color-primary-content);
         transition: {
             property: width, height, background-color, color;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         &:hover {
@@ -63,7 +62,7 @@
         .svg {
             transition: {
                 property: transform;
-                duration: 0.25s;
+                duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
         }
@@ -83,7 +82,7 @@
         }
         transition: {
             property: background-color, padding;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
         > h1 {
@@ -99,7 +98,7 @@
                 margin-left: var(--font-size);
                 transition: {
                     property: margin-left;
-                    duration: 0.25s;
+                    duration: var(--duration-fast);
                     timing-function: ease-in-out;
                 }
             }

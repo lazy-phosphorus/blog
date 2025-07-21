@@ -6,7 +6,7 @@
     }
     transition: {
         property: padding-left, padding-right;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
 }
@@ -22,7 +22,7 @@
     }
     transition: {
         property: padding, border-bottom-color;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
 }
@@ -35,7 +35,7 @@
     }
     transition: {
         property: margin-left, margin-right;
-        duration: 0.25s;
+        duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
     > table {
@@ -55,7 +55,7 @@
         }
         transition: {
             property: border-top-color, border-bottom-color;
-            duration: 0.25s;
+            duration: var(--duration-fast);
             timing-function: ease-in-out;
         }
     }

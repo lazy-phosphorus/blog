@@ -1,4 +1,4 @@
-import { useSignal } from "@preact/signals";
+import { useComputed, useSignal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 import type { JSX } from "preact";
 import { useCallback } from "preact/hooks";
@@ -10,6 +10,10 @@ import style from "./index.module.scss";
 
 function Button() {
     const isPending = useSignal(false);
+
+    const icon = useComputed(() =>
+        isPending.value ? <IconCheck /> : <IconCopy />,
+    );
 
     const handleCopyCode = useCallback<
         JSX.MouseEventHandler<HTMLButtonElement>
@@ -26,13 +30,13 @@ function Button() {
 
     return (
         <button
-            disabled={isPending.value}
+            disabled={isPending}
             class={style.button}
             type="button"
             title="复制代码"
             onClick={handleCopyCode}
         >
-            {isPending.value ? <IconCheck /> : <IconCopy />}
+            {icon}
         </button>
     );
 }

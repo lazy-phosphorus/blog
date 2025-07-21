@@ -7,7 +7,7 @@ export function create(container: HTMLElement) {
         resizeTo: container,
         antialias: true,
         autoDensity: true,
-        preference: "webgpu",
+        preference: "webgl",
         powerPreference: "high-performance",
         backgroundAlpha: 0,
         resolution: devicePixelRatio,

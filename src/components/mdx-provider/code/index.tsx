@@ -4,7 +4,6 @@ import type { JSX } from "preact";
 import { useCallback } from "preact/hooks";
 import { Code } from "@/components/code";
 import { IconCheck } from "@/components/svg/check";
-import { GrammarException } from "@/exception/grammar-exception";
 import { IconCopy } from "@svg/copy";
 import style from "./index.module.scss";
 
@@ -52,15 +51,8 @@ function calculateType(children: string) {
     const result = regex.exec(children);
     const type = result === null ? null : result[2];
     if (type === void 0)
-        throw new GrammarException(
-            "行内代码块",
-            (
-                <p>
-                    正则表达式与字符串不匹配。字符串为
-                    <Code type="str">{children}</Code>,匹配结果为
-                    <Code type="default">{type}</Code>。
-                </p>
-            ),
+        throw new Error(
+            `行内代码块：正则表达式与字符串不匹配。字符串为 ${children}，匹配结果为 ${type}`,
         );
     return type === null ? "default" : (type as "str");
 }

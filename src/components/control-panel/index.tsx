@@ -1,6 +1,6 @@
 import type { JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
-import { dispatchSuccessEvent } from "@/events/success";
+import { dispatchNoticeEvent } from "@/events/notice";
 import { useGloablSignal } from "@/hooks/useGlobalSignal";
 import { Card } from "@/layouts/card";
 import { Drawer } from "@/layouts/drawer";
@@ -102,7 +102,11 @@ export function ControlPanel() {
             event.preventDefault();
 
             saveConfig(config.current);
-            dispatchSuccessEvent("设置保存成功");
+            dispatchNoticeEvent({
+                mini: "设置保存成功",
+                duration: 3,
+                level: "success",
+            });
         },
         [config],
     );

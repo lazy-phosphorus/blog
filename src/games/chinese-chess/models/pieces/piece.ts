@@ -51,6 +51,8 @@ export abstract class Piece implements IMovable {
         }),
     });
 
+    protected abstract readonly __code: string;
+
     constructor(
         private readonly __bloc: Bloc,
         private readonly __type: string,
@@ -88,8 +90,8 @@ export abstract class Piece implements IMovable {
         );
     }
 
-    public get angle() {
-        return this.__self.angle;
+    public get code() {
+        return this.__code;
     }
 
     public set position(point: Point) {

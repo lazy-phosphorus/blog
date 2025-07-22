@@ -4,8 +4,11 @@ import { Bloc, Piece } from "./piece";
 import type { IMovable } from "./piece";
 
 export class Knight extends Piece implements IMovable {
+    protected override readonly __code;
+
     constructor(bloc: Bloc, blockSize: number) {
         super(bloc, "馬", blockSize);
+        this.__code = bloc === Bloc.RED ? "N" : "n";
     }
 
     public override movable(to: Point, situation: Situation) {

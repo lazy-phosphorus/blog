@@ -11,6 +11,7 @@ export async function onRenderHtml(context: PageContextServer) {
         <html lang="zh-cn">
             <head>
                 <meta charset="UTF-8" />
+                <meta name="referrer" content="never" />
                 <meta
                     name="viewport"
                     content="width=device-width, initial-scale=1.0"

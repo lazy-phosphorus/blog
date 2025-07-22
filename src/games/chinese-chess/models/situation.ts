@@ -87,6 +87,10 @@ export class Situation {
         return this.__battleField[y - 1]![x - 1]!.bloc;
     }
 
+    public getPieceAt({ x, y }: Point) {
+        return this.__battleField[y - 1]![x - 1]!;
+    }
+
     public syncBattleField(from: Point, to: Point): Piece | null {
         const temp = this.__battleField[to.y - 1]![to.x - 1]!;
         this.__battleField[to.y - 1]![to.x - 1] =
@@ -135,6 +139,27 @@ export class Situation {
         }
 
         this.__initialize();
+    }
+
+    public generateFen() {
+        let result = "";
+        let space = 0;
+        for (let j = 0; j < 10; j++) {
+            for (let i = 0; i < 9; i++) {
+                if (i === 8 && this.__battleField[j]![i]!.code === "") {
+                    result += `${(space + 1).toString()}`;
+                    space = 0;
+                } else if (this.__battleField[j]![i]!.code === "") space++;
+                else if (space !== 0) {
+                    result += `${space.toString()}${this.__battleField[j]![i]!.code}`;
+                    space = 0;
+                } else {
+                    result += this.__battleField[j]![i]!.code;
+                }
+            }
+            if (j !== 9) result += "/";
+        }
+        return result;
     }
 
     private __initialize() {

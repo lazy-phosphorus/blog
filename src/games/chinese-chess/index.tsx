@@ -6,6 +6,7 @@ import { SettingsForm } from "./components/settings-form";
 import { useSettings } from "./hooks/use-settings";
 import style from "./index.module.scss";
 import { Board } from "./models/board";
+import { Bloc } from "./models/pieces/piece";
 
 function calcBlockSize(width: number, height: number) {
     return Math.min(width / 10, height / 10);
@@ -15,7 +16,8 @@ export function ChineseChess() {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const boardRef = useRef<Board | null>(null);
 
-    const { isRedSide, isDeductiveMode } = useSettings();
+    const { isRedSide, isDeductiveMode, isAiEnabled, isAiTakeOverRed } =
+        useSettings();
     const isSettingsOpen = useSignal(false);
 
     const handleResize = useCallback(() => {
@@ -41,6 +43,13 @@ export function ChineseChess() {
         });
         effect(() => {
             boardRef.current!.isDeductive = isDeductiveMode.value;
+        });
+        effect(() => {
+            boardRef.current!.aiTakeOver = isAiEnabled.value
+                ? isAiTakeOverRed.value
+                    ? Bloc.RED
+                    : Bloc.BLACK
+                : null;
         });
 
         containerRef.current!.classList.add(style.ready!);

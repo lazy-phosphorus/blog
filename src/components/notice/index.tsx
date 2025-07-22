@@ -3,78 +3,31 @@ import type { ComponentChildren, JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { Dialog } from "@/components/dialog";
 import {
-    registerExceptionEventHandler,
-    unregisterExceptionEventHandler,
-} from "@/events/exception";
-import type { ExceptionEventHandler } from "@/events/exception";
-import {
-    registerSuccessEventHandler,
-    unregisterSuccessEventHandler,
-} from "@/events/success";
-import type { SuccessEventHandler } from "@/events/success";
+    registerNoticeEventHandler,
+    unregisterNoticeEventHandler,
+} from "@/events/notice";
+import type { NoticeEventHandler, NoticeEventType } from "@/events/notice";
 import { IconClose } from "@svg/close";
 import style from "./index.module.scss";
 
-type EventType = {
-    level: "success" | "info" | "warning" | "error";
-    mini: ComponentChildren;
-    full?: ComponentChildren;
-    timestamp: Date;
-    key: symbol;
-    duration?: number;
-};
-
 export function Notice() {
-    const events = useSignal<EventType[]>([]);
+    const events = useSignal<NoticeEventType[]>([]);
     const dialogContent = useSignal<ComponentChildren>(void 0);
     const closeText = useSignal<ComponentChildren>(void 0);
     const dialogRef = useRef<{ showModal: () => void } | null>(null);
 
-    const exceptionHandler = useCallback<ExceptionEventHandler>(
-        (event) => {
-            events.value = [
-                ...events.peek(),
-                {
-                    level: "error",
-                    mini: event.exception.Title,
-                    full: (
-                        <div>
-                            {event.exception.Title}
-                            {event.exception.Message}
-                        </div>
-                    ),
-                    timestamp: event.timestamp,
-                    key: Symbol(),
-                },
-            ];
-        },
-        [events],
-    );
-
-    const successHandler = useCallback<SuccessEventHandler>(
-        (event) => {
-            events.value = [
-                ...events.peek(),
-                {
-                    level: "success",
-                    mini: event.text,
-                    timestamp: event.timestamp,
-                    key: Symbol(),
-                    duration: 5,
-                },
-            ];
-        },
+    const eventHandler = useCallback<NoticeEventHandler>(
+        (event) => (events.value = [...events.peek(), event]),
         [events],
     );
 
     useEffect(() => {
-        registerExceptionEventHandler(exceptionHandler);
-        registerSuccessEventHandler(successHandler);
+        registerNoticeEventHandler(eventHandler);
+
         return () => {
-            unregisterExceptionEventHandler(exceptionHandler);
-            unregisterSuccessEventHandler(successHandler);
+            unregisterNoticeEventHandler(eventHandler);
         };
-    }, [exceptionHandler]);
+    }, [eventHandler]);
 
     const handleStartExit = useCallback(
         (event: JSX.TargetedEvent<HTMLDivElement | HTMLButtonElement>) => {
@@ -99,61 +52,39 @@ export function Notice() {
     );
 
     const handleOpenDialog = useCallback(
-        (
-            event: JSX.TargetedEvent<HTMLDivElement>,
-            content: ComponentChildren,
-            level: "success" | "info" | "warning" | "error",
-        ) => {
+        (e: JSX.TargetedEvent<HTMLDivElement>, event: NoticeEventType) => {
             batch(() => {
-                dialogContent.value = content;
-                switch (level) {
-                    case "success": {
-                        closeText.value = "やったぜ！";
-                        break;
-                    }
-                    case "info": {
-                        closeText.value = "我已了解此信息";
-                        break;
-                    }
-                    case "warning": {
-                        closeText.value = "嫌だも嫌だ、無理も無理";
-                        break;
-                    }
-                    case "error": {
-                        closeText.value =
-                            "你动了我的DOM树？或是万年不升级浏览器？";
-                        break;
-                    }
-                }
+                dialogContent.value = event.full;
+                closeText.value = event.close;
             });
             dialogRef.current!.showModal();
-            event.currentTarget!.parentElement!.classList.add(style.exit!);
+            e.currentTarget!.parentElement!.classList.add(style.exit!);
         },
         [dialogRef],
     );
 
     const eventLi = useComputed(() =>
-        events.value.map(({ mini, full, key, level, duration }) => (
+        events.value.map((event) => (
             <li
-                key={key}
-                class={style[level]}
-                onTransitionEnd={(e) => handleExited(e, key)}
+                key={event.key}
+                class={style[event.level]}
+                onTransitionEnd={(e) => handleExited(e, event.key)}
             >
                 <div
-                    class={full === void 0 ? style.plain : void 0}
+                    class={event.full === void 0 ? style.plain : void 0}
                     onClick={
-                        full === void 0
+                        event.full === void 0
                             ? void 0
-                            : (e) => handleOpenDialog(e, full, level)
+                            : (e) => handleOpenDialog(e, event)
                     }
                 >
-                    {mini}
+                    {event.mini}
                     <div
-                        class={`${style.counter}${duration === void 0 ? ` ${style.infinite}` : ""}`}
+                        class={`${style.counter}${event.duration === void 0 ? ` ${style.infinite}` : ""}`}
                         style={
-                            duration === void 0
+                            event.duration === void 0
                                 ? void 0
-                                : { "--duration": `${duration}s` }
+                                : { "--duration": `${event.duration}s` }
                         }
                         onAnimationEnd={handleStartExit}
                     />

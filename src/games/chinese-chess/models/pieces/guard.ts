@@ -3,8 +3,11 @@ import { Bloc, Piece } from "./piece";
 import type { IMovable } from "./piece";
 
 export class Guard extends Piece implements IMovable {
+    protected override readonly __code;
+
     constructor(bloc: Bloc, blockSize: number) {
         super(bloc, bloc === Bloc.RED ? "仕" : "士", blockSize);
+        this.__code = bloc === Bloc.RED ? "A" : "a";
     }
 
     public override movable(to: Point) {

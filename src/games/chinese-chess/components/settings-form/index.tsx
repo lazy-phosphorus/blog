@@ -2,6 +2,7 @@ import { useComputed } from "@preact/signals";
 import type { Signal } from "@preact/signals";
 import type { JSX } from "preact";
 import { useCallback } from "preact/hooks";
+import { Link } from "@/components/link";
 import { Switch } from "@/components/switch";
 import { Card } from "@/layouts/card";
 import { Drawer } from "@/layouts/drawer";
@@ -30,16 +31,16 @@ export function SettingsForm({ isOpen }: PropsType) {
     );
 
     const isAiEnabledLabel = useComputed(() =>
-        isAiEnabled.value ? "AI：已启用" : "AI：已禁用",
+        isAiEnabled.value ? "云库：已启用" : "云库：已禁用",
     );
     const isAiEnabledTitle = useComputed(() =>
-        isAiEnabled.value ? "禁用 AI" : "启用 AI",
+        isAiEnabled.value ? "禁用云库" : "启用云库",
     );
     const isAiTakeOverRedLabel = useComputed(() =>
-        isAiTakeOverRed.value ? "AI 执红" : "AI 执黑",
+        isAiTakeOverRed.value ? "云库执红" : "云库执黑",
     );
     const isAiTakeOverRedTitle = useComputed(() =>
-        isAiTakeOverRed.value ? "让 AI 执黑" : "让 AI 执红",
+        isAiTakeOverRed.value ? "让云库执黑" : "让云库执红",
     );
 
     const handleChangeSide = useCallback(() => {
@@ -105,13 +106,23 @@ export function SettingsForm({ isOpen }: PropsType) {
                         <Switch
                             name="isAiEnabled"
                             title={isAiEnabledTitle}
-                            placeholder="AI 设置"
+                            placeholder="云库设置"
                             checked={isAiEnabled}
                             onInput={handleChangeAi}
                         />
                     </div>
                     {isAiEnabled.value ? (
                         <>
+                            <p>
+                                该服务由
+                                <Link
+                                    href="https://www.chessdb.cn/query/"
+                                    title="点击跳转"
+                                >
+                                    中国象棋云库
+                                </Link>
+                                提供
+                            </p>
                             <div>
                                 <label for="isAiTakeOverRed">
                                     {isAiTakeOverRedLabel}
@@ -119,7 +130,7 @@ export function SettingsForm({ isOpen }: PropsType) {
                                 <Switch
                                     name="isAiTakeOverRed"
                                     title={isAiTakeOverRedTitle}
-                                    placeholder="AI 设置"
+                                    placeholder="云库接管设置"
                                     checked={isAiTakeOverRed}
                                     onInput={handleChangeAiSide}
                                 />

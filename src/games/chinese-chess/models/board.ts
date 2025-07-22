@@ -7,6 +7,7 @@ import {
     Ticker,
 } from "pixi.js";
 import type { Container, ImageSource } from "pixi.js";
+import { dispatchNoticeEvent } from "@/events/notice";
 import line from "../assets/board-line.svg";
 import background from "../assets/desk.webp";
 import { Bloc } from "./pieces/piece";
@@ -15,6 +16,8 @@ import { SelectBox } from "./select-box";
 import { Situation } from "./situation";
 
 type StepRecordType = { from: Point; to: Point; removed: Piece | null };
+
+const aiResultRegex = /^move:([a-i][0-9][a-i][0-9])/;
 
 export class Board {
     private readonly __situation: Situation;
@@ -30,11 +33,12 @@ export class Board {
         position: new Point(0, 0),
         texture: Texture.EMPTY,
     });
-
     private readonly __history: StepRecordType[] = [];
 
     private __turn = Bloc.RED;
     private __selectedPiece: null | Piece = null;
+    private __turnPeace = 0; // 未吃子的回合累计数
+    private __aiTakeOver: Bloc.BLACK | Bloc.RED | null = null;
 
     constructor(
         private __blockSize: number,
@@ -112,6 +116,11 @@ export class Board {
         this.__situation.isDeductive = value;
     }
 
+    public set aiTakeOver(value: Bloc.RED | Bloc.BLACK | null) {
+        this.__aiTakeOver = value;
+        if (this.__turn === value) this.__callAi();
+    }
+
     public regret() {
         const step = this.__history.pop();
         if (step === void 0) return;
@@ -140,6 +149,43 @@ export class Board {
         this.__selectedPiece = null;
         this.__history.splice(0);
         this.__turn = Bloc.RED;
+        this.__turnPeace = 0;
+    }
+
+    private __callAi() {
+        const fen = `${this.__situation.generateFen()} ${this.__turn === Bloc.RED ? "w" : "b"} - - ${this.__turnPeace} ${Math.floor(this.__history.length / 2) + 1}`;
+
+        fetch(
+            `https://www.chessdb.cn/chessdb.php?action=querybest&board=${encodeURIComponent(fen)}`,
+            { method: "GET" },
+        )
+            .then((v) => v.text())
+            .then((v) => {
+                if (v.startsWith("nobestmove")) {
+                    dispatchNoticeEvent({
+                        mini: "已脱谱",
+                        duration: 5,
+                        level: "warning",
+                    });
+                    return;
+                }
+
+                const result = v.match(aiResultRegex);
+                if (result === null || result[1] === void 0)
+                    throw `云库返回结果错误，返回值应符合正则表达式 /^move:([a-i][0-9][a-i][0-9])/，实际值为 ${v}`;
+
+                const from = new Point(
+                    result[1].charCodeAt(0) - 96,
+                    58 - result[1].charCodeAt(1),
+                );
+                const to = new Point(
+                    result[1].charCodeAt(2) - 96,
+                    58 - result[1].charCodeAt(3),
+                );
+
+                this.selected = this.__situation.getPieceAt(from);
+                this.__clickHandler(this.__situation.getPieceAt(to));
+            });
     }
 
     private __clickHandler(target: Piece) {
@@ -160,6 +206,8 @@ export class Board {
         );
         if (isMoved) {
             step.removed = this.__situation.syncBattleField(step.from, step.to);
+            if (step.removed === null) this.__turnPeace++;
+            else this.__turnPeace = 0;
             this.__history.push(step);
 
             this.__turn = this.__turn === Bloc.RED ? Bloc.BLACK : Bloc.RED;
@@ -172,6 +220,8 @@ export class Board {
 
             this.__toBox.visible = true;
             this.__toBox.position = step.to;
+
+            if (this.__turn === this.__aiTakeOver) this.__callAi();
         }
     }
 }

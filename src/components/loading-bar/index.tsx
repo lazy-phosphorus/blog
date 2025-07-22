@@ -11,6 +11,10 @@ export function LoadingBar() {
     const width = useSignal(0);
     const startTimestampRef = useRef(-1);
 
+    const divClass = useComputed(
+        () =>
+            `${style.loading}${width.value === 100 ? ` ${style.finish}` : ""}`,
+    );
     const divStyle = useComputed(() => ({ "--width": `${width.value}%` }));
 
     const animation = useCallback(
@@ -57,10 +61,7 @@ export function LoadingBar() {
     }, [startTimestampRef, width]);
 
     return (
-        <div
-            class={`${style.loading}${width.value === 100 ? ` ${style.finish}` : ""}`}
-            onTransitionEnd={handleHidden}
-        >
+        <div class={divClass} onTransitionEnd={handleHidden}>
             <div style={divStyle} />
         </div>
     );

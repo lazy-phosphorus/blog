@@ -26,9 +26,23 @@
         height: 100%;
         width: auto;
         position: relative;
+        animation: {
+            name: fade;
+            duration: var(--duration-fast);
+            timing-function: ease-in-out;
+            iteration-count: 1;
+        }
         @container (max-aspect-ratio: 1 / 1) {
             height: auto;
             width: 100%;
+        }
+        @keyframes fade {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 100;
+            }
         }
         &.ready {
             display: block;

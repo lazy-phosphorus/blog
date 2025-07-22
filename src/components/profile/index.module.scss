@@ -145,6 +145,9 @@
                 duration: var(--duration-fast);
                 timing-function: ease-in-out;
             }
+            > span {
+                text-align: center;
+            }
             > svg {
                 font-size: calc(var(--font-size) + 0.5rem);
                 transition: {

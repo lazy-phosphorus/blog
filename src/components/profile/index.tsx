@@ -15,9 +15,11 @@ import { IconJavaScript } from "@svg/javascript";
 import { IconKotlin } from "@svg/kotlin";
 import { IconLanguage } from "@svg/language";
 import { IconLua } from "@svg/lua";
+import { IconMdx } from "@svg/mdx";
 import { IconNoSmoking } from "@svg/no-smoking";
 import { IconNoWine } from "@svg/no-wine";
 import { IconOtaku } from "@svg/otaku";
+import { IconPixi } from "@svg/pixi";
 import { IconPowershell } from "@svg/powershell";
 import { IconPreact } from "@svg/preact";
 import { IconProtest } from "@svg/protest";
@@ -140,10 +142,21 @@ export function Profile() {
                     <IconScss />
                     <span>+</span>
                     <IconVite />
+                    <span>+</span>
+                    <IconMdx />
+                    <span>+</span>
+                    <IconPixi />
                 </div>
             </Card>
             <Link class={style.link} href="/post/" title="点击跳转">
                 浏览文章
+            </Link>
+            <Link
+                class={style.link}
+                href="/game/chinese-chess/"
+                title="点击跳转"
+            >
+                下盘象棋
             </Link>
         </div>
     );

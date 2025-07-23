@@ -36,6 +36,14 @@
 
 .mask {
     cursor: zoom-out;
+    transition: {
+        property: opacity;
+        duration: var(--duration-fast);
+        timing-function: ease-in-out;
+    }
+    &.exiting {
+        opacity: 0;
+    }
     &.hidden {
         display: none;
     }

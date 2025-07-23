@@ -1,4 +1,5 @@
-import { type Signal, useComputed } from "@preact/signals";
+import { useComputed } from "@preact/signals";
+import type { Signal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 import { useCallback } from "preact/hooks";
 import { Mask } from "@/components/mask";

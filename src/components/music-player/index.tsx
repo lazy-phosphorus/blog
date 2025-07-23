@@ -14,7 +14,6 @@ function handleCanPlay(event: JSX.TargetedEvent<HTMLAudioElement>) {
 }
 
 export function MusicPlayer() {
-    // TODO 淡出动画
     const index = useSignal(0);
     const isPaused = useSignal(true);
 
@@ -39,8 +38,8 @@ export function MusicPlayer() {
     }, [audio]);
 
     /* onTimeUpdate 也可以实现，但是帧率很低 */
-    const rotateAnime = useCallback(
-        (timestamp: DOMHighResTimeStamp) => {
+    const rotateAnime = useCallback<FrameRequestCallback>(
+        (timestamp) => {
             if (audio.current!.paused) {
                 startTimestamp.current = -1;
                 return;

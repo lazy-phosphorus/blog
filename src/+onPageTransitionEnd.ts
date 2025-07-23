@@ -4,8 +4,6 @@ import { dispatchLoadingEvent } from "@/events/loading";
 
 export async function onPageTransitionEnd(context: PageContextClient) {
     const { title: t } = context.config;
-    const scroller = document.querySelector("#scroller");
-    if (scroller !== null) scroller.scrollTop = 0;
     document.title =
         t === void 0
             ? title

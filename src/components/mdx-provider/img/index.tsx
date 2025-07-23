@@ -1,4 +1,4 @@
-import { useComputed, useSignal } from "@preact/signals";
+import { batch, useComputed, useSignal } from "@preact/signals";
 import type { JSX } from "preact";
 import { useCallback, useRef } from "preact/hooks";
 import { Image } from "@/components/image";
@@ -19,13 +19,14 @@ function handleImageMagnify(event: JSX.TargetedWheelEvent<HTMLDivElement>) {
 }
 
 export function img({ src, title, alt }: PropsType) {
-    // TODO 退出动画
     const isExpand = useSignal(false);
+    const isExiting = useSignal(false);
     const isMouseDown = useRef(false);
     const prevPoint = useRef<{ x: number; y: number } | null>(null);
 
     const maskClass = useComputed(
-        () => `${style.mask}${isExpand.value ? "" : ` ${style.hidden}`}`,
+        () =>
+            `${style.mask}${isExpand.value ? "" : ` ${style.hidden}`}${isExiting.value ? ` ${style.exiting}` : ""}`,
     );
 
     const handleImageZoomIn = useCallback(
@@ -37,10 +38,28 @@ export function img({ src, title, alt }: PropsType) {
         JSX.MouseEventHandler<HTMLDivElement>
     >(
         (event) => {
+            console.log(event);
             if (event.target !== event.currentTarget) return;
-            isExpand.value = false;
+            isExiting.value = true;
         },
-        [isExpand],
+        [isExiting],
+    );
+
+    const handleImageExited = useCallback<
+        JSX.TransitionEventHandler<HTMLDivElement>
+    >(
+        (event) => {
+            if (
+                event.propertyName !== "opacity" ||
+                event.target !== event.currentTarget
+            )
+                return;
+            batch(() => {
+                isExpand.value = false;
+                isExiting.value = false;
+            });
+        },
+        [isExpand, isExiting],
     );
 
     const handleImageMouseDown = useCallback(
@@ -89,7 +108,11 @@ export function img({ src, title, alt }: PropsType) {
                 </button>
                 <figcaption>{title}</figcaption>
             </figure>
-            <Mask class={maskClass} onClick={handleImageZoomOut}>
+            <Mask
+                class={maskClass}
+                onClick={handleImageZoomOut}
+                onTransitionEnd={handleImageExited}
+            >
                 <Image
                     src={src}
                     alt={alt}

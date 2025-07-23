@@ -17,8 +17,8 @@ export function LoadingBar() {
     );
     const divStyle = useComputed(() => `--width:${width.value}%`);
 
-    const animation = useCallback(
-        (timestamp: DOMHighResTimeStamp) => {
+    const animation = useCallback<FrameRequestCallback>(
+        (timestamp) => {
             if (startTimestampRef.current === -2) return;
             if (startTimestampRef.current === -1) {
                 startTimestampRef.current = timestamp;

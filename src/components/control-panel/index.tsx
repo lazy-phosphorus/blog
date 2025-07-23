@@ -1,7 +1,7 @@
 import type { JSX } from "preact";
 import { useCallback, useEffect, useRef } from "preact/hooks";
 import { dispatchNoticeEvent } from "@/events/notice";
-import { useGloablSignal } from "@/hooks/useGlobalSignal";
+import { useGloablSignal } from "@/hooks/use-global-signal";
 import { Card } from "@/layouts/card";
 import { Drawer } from "@/layouts/drawer";
 import { IconClose } from "@svg/close";

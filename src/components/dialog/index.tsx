@@ -1,3 +1,4 @@
+import { useComputed, useSignal } from "@preact/signals";
 import type { ComponentChildren, JSX } from "preact";
 import type { Ref } from "preact";
 import { useCallback, useImperativeHandle, useRef } from "preact/hooks";
@@ -14,8 +15,14 @@ export function Dialog({
     dialogRef,
     ...props
 }: JSX.IntrinsicElements["dialog"] & AdditionalPropsType) {
-    // TODO 退出动画
+    const isExiting = useSignal(false);
+
     const dialog = useRef<HTMLDialogElement | null>(null);
+
+    const dialogClass = useComputed(
+        () =>
+            `${style.dialog}${props.class !== void 0 ? ` ${props.class}` : ""}${isExiting.value ? ` ${style.exiting}` : ""}`,
+    );
 
     useImperativeHandle(dialogRef, () => {
         return dialog.current === null
@@ -23,20 +30,28 @@ export function Dialog({
             : { showModal: dialog.current.showModal.bind(dialog.current) };
     }, [dialog]);
 
-    const handleClose = useCallback<JSX.MouseEventHandler<HTMLButtonElement>>(
+    const handleClose = useCallback(
+        () => (isExiting.value = true),
+        [isExiting],
+    );
+
+    const handleExited = useCallback<
+        JSX.TransitionEventHandler<HTMLDialogElement>
+    >(
         (event) => {
-            const dialog = event.currentTarget
-                .parentElement as HTMLDialogElement;
-            dialog.close();
+            if (event.propertyName !== "opacity") return;
+            event.currentTarget.close();
+            isExiting.value = false;
         },
-        [],
+        [isExiting],
     );
 
     return (
         <dialog
             {...props}
             ref={dialog}
-            class={`${style.dialog}${props.class !== void 0 ? ` ${props.class}` : ""}`}
+            class={dialogClass}
+            onTransitionEnd={handleExited}
         >
             {children}
             <button type="button" title="关闭对话框" onClick={handleClose}>

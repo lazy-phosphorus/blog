@@ -8,7 +8,7 @@
     background-color: rgba(from var(--color-base-300) r g b / 0.9);
     color: var(--color-base-content);
     transition: {
-        property: background-color, color;
+        property: background-color, color, opacity;
         duration: var(--duration-fast);
         timing-function: ease-in-out;
     }
@@ -25,6 +25,9 @@
         100% {
             opacity: 100;
         }
+    }
+    &.exiting {
+        opacity: 0;
     }
     &::backdrop {
         backdrop-filter: blur(8px);

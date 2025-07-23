@@ -7,7 +7,7 @@ import { ControlPanel } from "@/components/control-panel";
 import { LoadingBar } from "@/components/loading-bar";
 import { Notice } from "@/components/notice";
 import { dispatchNoticeEvent } from "@/events/notice";
-import { useGloablSignal } from "@/hooks/useGlobalSignal";
+import { useGloablSignal } from "@/hooks/use-global-signal";
 import { Header } from "./header";
 import style from "./index.module.scss";
 

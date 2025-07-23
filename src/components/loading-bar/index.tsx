@@ -15,7 +15,7 @@ export function LoadingBar() {
         () =>
             `${style.loading}${width.value === 100 ? ` ${style.finish}` : ""}`,
     );
-    const divStyle = useComputed(() => ({ "--width": `${width.value}%` }));
+    const divStyle = useComputed(() => `--width:${width.value}%`);
 
     const animation = useCallback(
         (timestamp: DOMHighResTimeStamp) => {
